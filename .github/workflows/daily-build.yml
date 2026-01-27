@@ -6,10 +6,7 @@ on:
   workflow_dispatch: {}
   push:
     branches: [ main ]
-    paths:
-      - "tools/**"
-      - ".github/workflows/daily-build.yml"
-      - "package.json"
+
 
 jobs:
   build:
