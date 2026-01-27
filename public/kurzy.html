@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <title>Kurzy – SŠ Bor (poradci)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="chatbot.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="Domů">
+        <div class="brand-mark">SŠ</div>
+        <div>
+          <p class="brand-title">Střední škola Bor</p>
+          <p class="brand-sub">Kariérové poradenství</p>
+        </div>
+      </a>
+      <nav class="nav" aria-label="Hlavní navigace">
+        <a href="index.html#obory">Obory</a>
+        <a href="kurzy.html">Kurzy</a>
+        <a href="index.html#faq">FAQ</a>
+        <a href="index.html#kontakt">Kontakt</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="section">
+      <div class="hero" style="background: linear-gradient(120deg, rgba(22,163,74,.95) 0%, rgba(34,197,94,.95) 100%);">
+        <div class="hero-grid">
+          <div>
+            <h1>Kurzy a workshopy (připravujeme)</h1>
+            <p>Tahle stránka je připravená pro budoucí rozšíření. Můžeme sem přidat přihlášky, termíny, kapacity a materiály ke stažení.</p>
+            <ul class="checklist">
+              <li>Kurzy pro uchazeče (příprava na přijímačky, dny otevřených dveří)</li>
+              <li>Kurzy pro žáky (CV, pohovor, praxe, podnikání)</li>
+              <li>Workshopy s firmami a exkurze</li>
+            </ul>
+            <div class="hero-actions">
+              <a class="btn btn--primary" href="index.html#kontakt">Chci doplnit kurzy</a>
+              <a class="btn btn--ghost" href="index.html">Zpět na úvod</a>
+            </div>
+          </div>
+          <div class="card" style="border-color: rgba(255,255,255,.25); background: rgba(255,255,255,.14); color: #fff;">
+            <h3 style="margin-top:0; color:#fff;">Co sem doplnit</h3>
+            <ul class="checklist">
+              <li>Název, popis, cílovka</li>
+              <li>Termín, délka, místo</li>
+              <li>Kapacita, cena (pokud je)</li>
+              <li>Tlačítko „Přihlásit se“</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="grid">
+        <div class="card col-6">
+          <h3>Ukázková struktura kurzů</h3>
+          <p class="muted">Až budete chtít, napojíme to na JSON nebo Google Sheet.</p>
+          <ul class="meta-list">
+            <li>Připravované termíny</li>
+            <li>Archiv proběhlých akcí</li>
+            <li>Filtry (pro žáky / pro uchazeče / pro veřejnost)</li>
+          </ul>
+        </div>
+        <div class="card col-6">
+          <h3>Dokumenty a materiály</h3>
+          <p class="muted">Může to být i jednoduchý seznam odkazů s odrážkami.</p>
+          <ul class="meta-list">
+            <li>PDF pozvánky</li>
+            <li>Prezentace</li>
+            <li>Checklist „Jak se připravit“</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <footer class="site-footer">
+      <div class="footer-grid">
+        <div>
+          <strong>SŠ Bor – poradci</strong>
+          <div class="muted">Statická ukázka struktury (kurzy budou doplněny).</div>
+        </div>
+        <div class="muted">Tip: kurzy můžeme snadno spravovat přes JSON/Sheet a automaticky vykreslit.</div>
+      </div>
+    </footer>
+  </main>
+
+  <!-- Chatbot (funguje i zde – DATA je v jobs-demo.js) -->
+  <div id="chat-trigger">?</div>
+  <div id="chat-window">
+    <div class="chat-header">
+      <h3>Kariérový poradce</h3>
+      <p>Jak vám mohu pomoci?</p>
+    </div>
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="chat-input">
+      <input type="text" id="chat-input-field" placeholder="Napište svou zprávu...">
+      <button id="chat-send-btn">→</button>
+    </div>
+  </div>
+
+  <script src="jobs-demo.js"></script>
+  <script src="chatbot.js"></script>
+</body>
+</html>

@@ -2,307 +2,157 @@
 <html lang="cs">
 <head>
 <meta charset="utf-8">
-<title>UKÁZKA – SŠ Bor · 3 obory (Automechanik · Opravář ZS · Kuchař‑číšník)</title>
+<title>Poradci – SŠ Bor</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="chatbot.css">
-<style>
-:root{
-  /* společné barvy */
-  --ink:#0e1a2b; --paper:#fff; --line:#e9eef7;
-  /* akcenty pro jednotlivé obory */
-  --blue:#1366d6; --blue-700:#0f4fa6;
-  --green:#16a34a; --green-700:#12813b;
-  --red:#dc2626; --red-700:#b91c1c;
-}
-html, body { height: 100%; }
-body{
-  margin:0; color:var(--ink);
-  background:
-    radial-gradient(circle at 10% 10%, rgba(19,102,214,0.06) 0 12%, transparent 13%) 0 0/22px 22px,
-    linear-gradient(180deg, #f7fbff 0%, #eef5ff 40%, #ffffff 100%);
-  font-family: system-ui, "Segoe UI", Roboto, Arial, sans-serif;
-}
-.container{ max-width: 1120px; margin: 2rem auto; padding: 0 1rem; }
-.hero{ color:#fff; border-radius: 14px; padding: 1rem 1rem; margin-bottom: 1rem; box-shadow: 0 8px 22px rgba(6,30,77,.18); }
-.hero-row{ display:flex; align-items:center; gap: 14px; flex-wrap:wrap; }
-.brand{ display:flex; align-items:center; gap: 12px; }
-.brand svg{ height:48px; width:auto; filter: drop-shadow(0 1px 2px rgba(0,0,0,.2)); }
-.brand .title{ margin:0; line-height:1.1; font-weight:800; font-size: clamp(1.05rem, 1.8vw, 1.35rem); color:#fff; }
-.brand .sub{ margin:0; font-size:.92rem; color:rgba(255,255,255,.92); }
-.toolbar{ display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; margin-top:.75rem; }
-.btn{ border:0; color:#fff; padding: 12px 18px; border-radius: 10px; font-weight: 700; cursor: pointer; box-shadow: 0 6px 18px rgba(6,30,77,.25); transition: background .2s ease, transform .02s ease-in-out; }
-.btn:active{ transform: translateY(1px); }
-.select{ appearance:none; background:#fff; border:1px solid var(--line); color:var(--ink); padding:10px 12px; border-radius:10px; font-weight:600; }
-.panels{ display:grid; grid-template-columns: 1fr; gap: 1rem; margin-top: 1rem; }
-@media (min-width: 900px){ .panels{ grid-template-columns: 1fr 1fr; } }
-.card{ background: var(--paper); border:1px solid var(--line); border-radius: 14px; padding: 1rem 1rem 1.2rem; box-shadow: 0 4px 18px rgba(6,30,77,.06); }
-.card h3{ margin-top:0; margin-bottom:.75rem; }
-table{ width:100%; border-collapse: collapse; }
-th, td{ padding:.6rem .5rem; border-bottom:1px solid var(--line); text-align:left; }
-th{ font-size:.92rem; color:#40506b; }
-.muted{ color:#64718a; }
-.tag{ font-size:.82rem; background:#eaf2ff; color:#244a8e; padding:.2rem .55rem; border-radius:999px; }
-.badge{ font-size:.72rem; background:#fff; color:#124a9a; padding:.15rem .45rem; border-radius:999px; border:1px solid rgba(255,255,255,.65); }
-
-/* barevné varianty */
-.hero--auto{ background: linear-gradient(90deg, var(--blue) 0%, #5a9ef6 100%); }
-.btn--auto{ background: var(--blue); }
-.btn--auto:hover{ background: var(--blue-700); }
-
-.hero--agri{ background: linear-gradient(90deg, var(--green) 0%, #22c55e 100%); }
-.btn--agri{ background: var(--green); }
-.btn--agri:hover{ background: var(--green-700); }
-
-.hero--gastro{ background: linear-gradient(90deg, var(--red) 0%, #ef4444 100%); }
-.btn--gastro{ background: var(--red); }
-.btn--gastro:hover{ background: var(--red-700); }
-
-.section{ margin-bottom: 2rem; }
-</style>
 </head>
 <body>
-<div class="container">
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="index.html" aria-label="Domů">
+      <div class="brand-mark">SŠ</div>
+      <div>
+        <p class="brand-title">Střední škola Bor</p>
+        <p class="brand-sub">Kariérové poradenství</p>
+      </div>
+    </a>
+    <nav class="nav" aria-label="Hlavní navigace">
+      <a href="#obory">Obory</a>
+      <a href="kurzy.html">Kurzy</a>
+      <a href="#faq">FAQ</a>
+      <a href="#kontakt">Kontakt</a>
+    </nav>
+  </div>
+</header>
 
-  <section class="section" id="sec-auto">
-    <div class="hero hero--auto">
-      <div class="hero-row">
-        <div class="brand">
-          <svg xmlns="http://www.w3.org/2000/svg" width="180" height="48" viewBox="0 0 220 60"><defs><linearGradient id="g1" x1="0" x2="1" y1="0" y2="1"><stop offset="0%" stop-color="#1366d6"/><stop offset="100%" stop-color="#5a9ef6"/></linearGradient></defs><rect rx="10" ry="10" width="220" height="60" fill="url(#g1)"/><text x="110" y="37" font-family="Segoe UI, Arial" font-size="22" text-anchor="middle" fill="#fff" font-weight="700">SŠ BOR</text></svg>
-          <div>
-            <h1 class="title">Střední škola Bor</h1>
-            <p class="sub">Možnosti uplatnění · <b>Automechanik</b> <span class="badge">UKÁZKA</span></p>
+<main class="container">
+  <section class="section" id="home">
+    <div class="hero">
+      <div class="hero-grid">
+        <div>
+          <h1>Poradci a uplatnění – rychlý rozcestník</h1>
+          <p>Úvodní stránka je teď krátká a přehledná: obory jsou rozdělené na samostatné stránky a sem přibude časem i nabídka kurzů.</p>
+          <ul class="checklist">
+            <li>Vyberete obor a lokalitu (kraj / zahraničí)</li>
+            <li>Uvidíte přehled mezd, top zaměstnavatele a tabulku nabídek</li>
+            <li>Do budoucna: kurzy, workshopy, materiály a přihlášky</li>
+          </ul>
+          <div class="hero-actions">
+            <a class="btn btn--primary" href="#obory">Vybrat obor</a>
+            <a class="btn btn--ghost" href="kurzy.html">Kurzy (připravujeme)</a>
           </div>
         </div>
+        <div class="card" style="border-color: rgba(255,255,255,.25); background: rgba(255,255,255,.14); color: #fff;">
+          <h3 style="margin-top:0; color:#fff;">Tip</h3>
+          <p style="margin: .35rem 0 0 0; color: rgba(255,255,255,.92)">Klikněte na obor níže. Každý má vlastní stránku – už to není „všechno na jedné“.</p>
+          <ul class="checklist">
+            <li>Automechanik</li>
+            <li>Opravář ZS</li>
+            <li>Kuchař‑číšník</li>
+          </ul>
+        </div>
       </div>
-      <div class="toolbar" style="margin-top:.75rem">
-        <button class="btn btn--auto" data-role="load" data-target="auto">Automechanik</button>
-        <select class="select" data-role="region" data-target="auto" aria-label="Vyberte kraj">
-          <option value="">Všechny lokality</option>
-          <option value="CZ032">Plzeňský kraj</option>
-          <option value="CZ041">Karlovarský kraj</option>
-          <option value="zahranici_bor">Zahraničí (do 70km od Boru)</option>
-        </select>
-      </div>
-    </div>
-    <div class="panels">
-      <div class="card">
-        <h3>Přehled</h3>
-        <div>Počet míst: <b data-id="count-auto">–</b></div>
-        <div>Medián spodní mzdy: <b data-id="median-auto">–</b> Kč</div>
-        <div style="margin-top:.5rem"><span class="tag">CZ‑ISCO 7231 / 72311</span></div>
-      </div>
-      <div class="card">
-        <h3>Top zaměstnavatelé</h3>
-        <ol data-id="top-auto" style="margin:0; padding-left:1.1rem"></ol>
-      </div>
-    </div>
-
-    <div class="card" style="margin-top:1rem">
-      <h3>Poslední nabídky</h3>
-      <table role="table" aria-label="Tabulka nabídek automechanik">
-        <thead><tr>
-          <th>Profese</th><th>Zaměstnavatel</th><th>Okres</th><th>Mzda</th><th>Datum</th>
-        </tr></thead>
-        <tbody data-id="tbl-auto"></tbody>
-      </table>
-      <p class="muted" style="margin-top:.75rem">Zdroj: Otevřená data MPSV / ÚP ČR (simulace bez serveru)</p>
     </div>
   </section>
 
-  <section class="section" id="sec-agri">
-    <div class="hero hero--agri">
-      <div class="hero-row">
-        <div class="brand">
-          <svg xmlns="http://www.w3.org/2000/svg" width="180" height="48" viewBox="0 0 220 60"><defs><linearGradient id="g2" x1="0" x2="1" y1="0" y2="1"><stop offset="0%" stop-color="#16a34a"/><stop offset="100%" stop-color="#22c55e"/></linearGradient></defs><rect rx="10" ry="10" width="220" height="60" fill="url(#g2)"/><text x="110" y="37" font-family="Segoe UI, Arial" font-size="22" text-anchor="middle" fill="#fff" font-weight="700">SŠ BOR</text></svg>
-          <div>
-            <h1 class="title">Střední škola Bor</h1>
-            <p class="sub">Možnosti uplatnění · <b>Opravář zemědělských strojů</b> <span class="badge">UKÁZKA</span></p>
-          </div>
+  <section class="section" id="obory">
+    <h2 class="section-title">Obory</h2>
+    <p class="section-sub">Rozklikněte obor a podívejte se na uplatnění a nabídky práce (demo data).</p>
+
+    <div class="grid" style="margin-top: 1rem">
+      <div class="card card--obor card--auto col-4">
+        <h3>Automechanik</h3>
+        <p>Práce v ČR i dojezdově v zahraničí.</p>
+        <ul class="meta-list">
+          <li>Filtr lokality</li>
+          <li>Přehled mezd</li>
+          <li>Poslední nabídky</li>
+        </ul>
+        <div style="margin-top: .9rem">
+          <a class="btn btn--primary" href="obor-automechanik.html">Otevřít obor</a>
         </div>
       </div>
-      <div class="toolbar" style="margin-top:.75rem">
-        <button class="btn btn--agri" data-role="load" data-target="agri">Opravář ZS</button>
-        <select class="select" data-role="region" data-target="agri" aria-label="Vyberte kraj">
-          <option value="">Všechny lokality</option>
-          <option value="CZ032">Plzeňský kraj</option>
-          <option value="CZ041">Karlovarský kraj</option>
-          <option value="zahranici_bor">Zahraničí (do 70km od Boru)</option>
-        </select>
-      </div>
-    </div>
 
-    <div class="panels">
-      <div class="card">
-        <h3>Přehled</h3>
-        <div>Počet míst: <b data-id="count-agri">–</b></div>
-        <div>Medián spodní mzdy: <b data-id="median-agri">–</b> Kč</div>
-        <div style="margin-top:.5rem"><span class="tag">CZ‑ISCO 7233 / 72334</span></div>
+      <div class="card card--obor card--agri col-4">
+        <h3>Opravář ZS</h3>
+        <p>Mechanika zemědělské techniky a servis.</p>
+        <ul class="meta-list">
+          <li>Filtr lokality</li>
+          <li>Top zaměstnavatelé</li>
+          <li>Tabulka nabídek</li>
+        </ul>
+        <div style="margin-top: .9rem">
+          <a class="btn btn--primary" href="obor-opravar-zs.html" style="background: var(--green); border-color: var(--green);">Otevřít obor</a>
+        </div>
       </div>
-      <div class="card">
-        <h3>Top zaměstnavatelé</h3>
-        <ol data-id="top-agri" style="margin:0; padding-left:1.1rem"></ol>
-      </div>
-    </div>
 
-    <div class="card" style="margin-top:1rem">
-      <h3>Poslední nabídky</h3>
-      <table role="table" aria-label="Tabulka nabídek opravář ZS">
-        <thead><tr>
-          <th>Profese</th><th>Zaměstnavatel</th><th>Okres</th><th>Mzda</th><th>Datum</th>
-        </tr></thead>
-        <tbody data-id="tbl-agri"></tbody>
-      </table>
-      <p class="muted" style="margin-top:.75rem">Zdroj: Otevřená data MPSV / ÚP ČR (simulace bez serveru)</p>
+      <div class="card card--obor card--gastro col-4">
+        <h3>Kuchař‑číšník</h3>
+        <p>Gastro provozy, hotely, catering.</p>
+        <ul class="meta-list">
+          <li>Filtr lokality</li>
+          <li>Přehled mezd</li>
+          <li>Poslední nabídky</li>
+        </ul>
+        <div style="margin-top: .9rem">
+          <a class="btn btn--primary" href="obor-gastro.html" style="background: var(--red); border-color: var(--red);">Otevřít obor</a>
+        </div>
+      </div>
     </div>
   </section>
 
-  <section class="section" id="sec-gastro">
-    <div class="hero hero--gastro">
-      <div class="hero-row">
-        <div class="brand">
-          <svg xmlns="http://www.w3.org/2000/svg" width="180" height="48" viewBox="0 0 220 60"><defs><linearGradient id="g3" x1="0" x2="1" y1="0" y2="1"><stop offset="0%" stop-color="#dc2626"/><stop offset="100%" stop-color="#ef4444"/></linearGradient></defs><rect rx="10" ry="10" width="220" height="60" fill="url(#g3)"/><text x="110" y="37" font-family="Segoe UI, Arial" font-size="22" text-anchor="middle" fill="#fff" font-weight="700">SŠ BOR</text></svg>
-          <div>
-            <h1 class="title">Střední škola Bor</h1>
-            <p class="sub">Možnosti uplatnění · <b>Kuchař‑číšník</b> <span class="badge">UKÁZKA</span></p>
-          </div>
+  <section class="section" id="faq">
+    <h2 class="section-title">FAQ</h2>
+    <div class="grid" style="margin-top: 1rem">
+      <div class="card col-6">
+        <h3>Co jsou ta data?</h3>
+        <p class="muted">Je to statická ukázka bez serveru (prototyp). Do budoucna se dá napojit reálný zdroj nebo vlastní databáze.</p>
+        <ul class="meta-list">
+          <li>Možnost přidat více krajů</li>
+          <li>Možnost přidat detail nabídky</li>
+          <li>Možnost přidat export (CSV/PDF)</li>
+        </ul>
+      </div>
+      <div class="card col-6">
+        <h3>Co bude v kurzech?</h3>
+        <p class="muted">Kurzy a workshopy budou na vlastní stránce, aby se úvod nezahltit.</p>
+        <ul class="meta-list">
+          <li>Kurzy pro uchazeče / žáky</li>
+          <li>Termíny, přihlášky, kapacity</li>
+          <li>Materiály ke stažení</li>
+        </ul>
+        <div style="margin-top:.9rem">
+          <a class="btn" href="kurzy.html">Přejít na kurzy</a>
         </div>
       </div>
-      <div class="toolbar" style="margin-top:.75rem">
-        <button class="btn btn--gastro" data-role="load" data-target="gastro">Kuchař‑číšník</button>
-        <select class="select" data-role="region" data-target="gastro" aria-label="Vyberte kraj">
-          <option value="">Všechny lokality</option>
-          <option value="CZ032">Plzeňský kraj</option>
-          <option value="CZ041">Karlovarský kraj</option>
-          <option value="zahranici_bor">Zahraničí (do 70km od Boru)</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="panels">
-      <div class="card">
-        <h3>Přehled</h3>
-        <div>Počet míst: <b data-id="count-gastro">–</b></div>
-        <div>Medián spodní mzdy: <b data-id="median-gastro">–</b> Kč</div>
-        <div style="margin-top:.5rem"><span class="tag">CZ‑ISCO 5120 / 5131</span></div>
-      </div>
-      <div class="card">
-        <h3>Top zaměstnavatelé</h3>
-        <ol data-id="top-gastro" style="margin:0; padding-left:1.1rem"></ol>
-      </div>
-    </div>
-
-    <div class="card" style="margin-top:1rem">
-      <h3>Poslední nabídky</h3>
-      <table role="table" aria-label="Tabulka nabídek kuchař‑číšník">
-        <thead><tr>
-          <th>Profese</th><th>Zaměstnavatel</th><th>Okres</th><th>Mzda</th><th>Datum</th>
-        </tr></thead>
-        <tbody data-id="tbl-gastro"></tbody>
-      </table>
-      <p class="muted" style="margin-top:.75rem">Zdroj: Otevřená data MPSV / ÚP ČR (simulace bez serveru)</p>
     </div>
   </section>
 
-</div>
+  <section class="section" id="kontakt">
+    <h2 class="section-title">Kontakt / další rozšíření</h2>
+    <div class="card">
+      <p class="muted">Až budete chtít, doplním sem konkrétní kontakty, formulář, nebo sekci „Poradci“ s profily (fotka, role, konzultační hodiny).</p>
+      <ul class="meta-list">
+        <li>Nové stránky: poradci, praxe, kurzy, dokumenty</li>
+        <li>Rozšíření filtrů a vyhledávání</li>
+        <li>Jednotný moderní vzhled napříč stránkami</li>
+      </ul>
+    </div>
+  </section>
 
-<script>
-// ===== Demo datasety (statická ukázka) =====
-const DATA = {
-  auto: [
-    /* === NOVÁ DATA (AUTO) === */
-    {kraj:"Německo", area:"zahranici_bor", okres:"92637 Weiden", profese:"Kfz-Mechaniker / Mechatroniker (m/w/d)", cz_isco:"72311", mzda_od:30000, mzda_do:40000, zamestnavatel:"A.T.U Auto-Teile-Unger", datum:"2025-11-07"},
-    {kraj:"Německo", area:"zahranici_bor", okres:"92637 Weiden", profese:"Zweiradmechatroniker (m/w/d)", cz_isco:"72311", mzda_od:30000, mzda_do:40000, zamestnavatel:"Zweirad-Center Weiden", datum:"2025-11-07"},
-    {kraj:"Německo", area:"zahranici_bor", okres:"92729 Weiherhammer", profese:"Industriemechaniker (m/w/d)", cz_isco:"72311", mzda_od:30000, mzda_do:40000, zamestnavatel:"BHS Corrugated", datum:"2025-11-07"},
-    {kraj:"Německo", area:"zahranici_bor", okres:"92637 Weiden", profese:"KFZ-Mechatroniker (m/w/d) - Nutzfahrzeugtechnik", cz_isco:"72311", mzda_od:30000, mzda_do:40000, zamestnavatel:"Autohaus Weiden", datum:"2025-11-07"},
-    /* === PŮVODNÍ CZ DATA (AUTO) === */
-    {kraj:"CZ032", okres:"Plzeň-město", profese:"Mechanik opravář motorových vozidel (automechanik)", cz_isco:"72311", mzda_od:28000, mzda_do:35000, zamestnavatel:"AutoServis Plzeň s.r.o.", datum:"2025-10-15"},
-    {kraj:"CZ032", okres:"Tachov", profese:"Automechanik", cz_isco:"72311", mzda_od:29000, mzda_do:36000, zamestnavatel:"Truck & Car Tachov a.s.", datum:"2025-10-14"},
-    {kraj:"CZ041", okres:"Karlovy Vary", profese:"Automechanik – osobní vozy", cz_isco:"72311", mzda_od:27000, mzda_do:34000, zamestnavatel:"KV Auto, spol. s r.o.", datum:"2025-10-13"},
-    {kraj:"CZ041", okres:"Sokolov", profese:"Mechanik opravář motorových vozidel", cz_isco:"72311", mzda_od:26000, mzda_do:33000, zamestnavatel:"Sokolov Auto Repair", datum:"2025-10-12"}
-  ],
-  agri: [
-    /* === PŮVODNÍ PŘESUNUTÁ DATA (AGRI) === */
-    {kraj:"Německo", area:"zahranici_bor", okres:"Marktleuthen", profese:"Land-/Baumaschinenmechatroniker/in", cz_isco:"72334", mzda_od:30000, mzda_do:40000, zamestnavatel:"Wunderlich Christof", datum:"2025-10-20"},
-    {kraj:"Německo", area:"zahranici_bor", okres:"Bad Laer", profese:"Landmaschinenmechaniker/in", cz_isco:"72334", mzda_od:30000, mzda_do:40000, zamestnavatel:"SOVEA Personalservice GmbH", datum:"2025-10-19"},
-    {kraj:"Německo", area:"zahranici_bor", okres:"Friesoythe", profese:"Landmaschinenmechaniker/in", cz_isco:"72334", mzda_od:30000, mzda_do:40000, zamestnavatel:"pluss Personalmanagement GmbH", datum:"2025-10-18"},
-    /* === NOVÁ DATA (AGRI) === */
-    {kraj:"Německo", area:"zahranici_bor", okres:"95643 Tirschenreuth", profese:"Land- und Baumaschinenmechatroniker/in", cz_isco:"72334", mzda_od:30000, mzda_do:40000, zamestnavatel:"BayWa AG", datum:"2025-11-07"},
-    {kraj:"Německo", area:"zahranici_bor", okres:"95632 Wunsiedel", profese:"Land- und Baumaschinenmechatroniker (m/w/d)", cz_isco:"72334", mzda_od:30000, mzda_do:40000, zamestnavatel:"XXXLutz", datum:"2025-11-07"},
-    {kraj:"Německo", area:"zahranici_bor", okres:"95676 Wiesau", profese:"Servicetechniker für Landmaschinen (m/w/d)", cz_isco:"72334", mzda_od:30000, mzda_do:40000, zamestnavatel:"CLAAS", datum:"2025-11-07"},
-    /* === PŮVODNÍ CZ DATA (AGRI) === */
-    {kraj:"CZ032", okres:"Klatovy", profese:"Opravář zemědělských strojů", cz_isco:"72334", mzda_od:29000, mzda_do:38000, zamestnavatel:"Agro KT Servis s.r.o.", datum:"2025-10-15"},
-    {kraj:"CZ032", okres:"Plzeň-jih", profese:"Mechanik zemědělské techniky", cz_isco:"72334", mzda_od:30000, mzda_do:40000, zamestnavatel:"ZETOR Agro Plzeň", datum:"2025-10-14"},
-    {kraj:"CZ041", okres:"Cheb", profese:"Opravář zemědělských a lesnických strojů", cz_isco:"72334", mzda_od:28000, mzda_do:37000, zamestnavatel:"FarmTech Západ", datum:"2025-10-13"}
-  ],
-  gastro: [
-    /* === NOVÁ DATA (GASTRO) === */
-    {kraj:"Německo", area:"zahranici_bor", okres:"95632 Wunsiedel", profese:"Koch (m/w/d)", cz_isco:"5120", mzda_od:28000, mzda_do:35000, zamestnavatel:"Hotel Bayerischer Hof", datum:"2025-11-07"},
-    {kraj:"Německo", area:"zahranici_bor", okres:"92637 Weiden", profese:"Koch (m/w/d)", cz_isco:"5120", mzda_od:28000, mzda_do:35000, zamestnavatel:"BräuWirt", datum:"2025-11-07"},
-    {kraj:"Německo", area:"zahranici_bor", okres:"95652 Waldsassen", profese:"Alleinkoch (m/w/d)", cz_isco:"5120", mzda_od:28000, mzda_do:35000, zamestnavatel:"Hotel zum ehem. Königlich-Bayerischen Forsthaus", datum:"2025-11-07"},
-    {kraj:"Německo", area:"zahranici_bor", okres:"92637 Weiden i.d.OPf.", profese:"Kellner / Servicemitarbeiter (m/w/d)", cz_isco:"5131", mzda_od:26000, mzda_do:32000, zamestnavatel:"Hotel Stadtkrug", datum:"2025-11-07"},
-    {kraj:"Německo", area:"zahranici_bor", okres:"95698 Neualbenreuth", profese:"Servicekraft (m/w/d)", cz_isco:"5131", mzda_od:26000, mzda_do:32000, zamestnavatel:"Schlosshotel Ernestgrün", datum:"2025-11-07"},
-    {kraj:"Německo", area:"zahranici_bor", okres:"95643 Tirschenreuth", profese:"Koch/Köchin", cz_isco:"5120", mzda_od:28000, mzda_do:35000, zamestnavatel:"Kliniken Nordoberpfalz AG", datum:"2025-11-07"},
-    {kraj:"Německo", area:"zahranici_bor", okres:"95643 Tirschenreuth", profese:"Koch (m/w/d) Pflegeheim", cz_isco:"5120", mzda_od:28000, mzda_do:35000, zamestnavatel:"BRK-Kreisverband Tirschenreuth", datum:"2025-11-07"},
-    /* === PŮVODNÍ CZ DATA (GASTRO) === */
-    {kraj:"CZ032", okres:"Plzeň-město", profese:"Kuchař – teplá kuchyně", cz_isco:"51201", mzda_od:26000, mzda_do:32000, zamestnavatel:"Restaurace U Zvonu", datum:"2025-10-15"},
-    {kraj:"CZ032", okres:"Tachov", profese:"Číšník/servírka", cz_isco:"5131", mzda_od:23000, mzda_do:30000, zamestnavatel:"Hotel Svět", datum:"2025-10-14"},
-    {kraj:"CZ041", okres:"Karlovy Vary", profese:"Kuchař studené kuchyně", cz_isco:"51201", mzda_od:24000, mzda_do:31000, zamestnavatel:"Grand Bistro KV", datum:"2025-10-13"},
-    {kraj:"CZ041", okres:"Sokolov", profese:"Číšník/servírka", cz_isco:"5131", mzda_od:22000, mzda_do:28000, zamestnavatel:"Penzion Sokol", datum:"2025-10-12"}
-  ]
-};
+  <footer class="site-footer">
+    <div class="footer-grid">
+      <div>
+        <strong>SŠ Bor – poradci</strong>
+        <div class="muted">Rychlý rozcestník + samostatné stránky oborů.</div>
+      </div>
+      <div class="muted">Tip: když mi pošlete texty pro „Kurzy“ a „Poradci“, doplním je do layoutu.</div>
+    </div>
+  </footer>
+</main>
 
-function median(arr){ if(!arr.length) return null; const s=[...arr].sort((a,b)=>a-b); const m=Math.floor(s.length/2); return s.length%2? s[m] : Math.round((s[m-1]+s[m])/2); }
-
-function render(target){
-  const regionSel = document.querySelector(`select[data-role=region][data-target=${target}]`);
-  const region = regionSel ? regionSel.value : '';
-  
-  /* === UPRAVENÝ FILTR === */
-  const rows = (DATA[target]||[]).filter(r => {
-    // Nová logika pro zahraničí
-    if (region === 'zahranici_bor') {
-      return r.area === 'zahranici_bor';
-    }
-    // Původní logika pro české kraje
-    return !region || r.kraj === region;
-  }).sort((a,b)=> (b.datum||'').localeCompare(a.datum||''));
-  /* === KONEC UPRAVENÉHO FILTRU === */
-
-  // count & median
-  const wages = rows.map(r=> r.mzda_od).filter(v=> typeof v==='number' && !Number.isNaN(v));
-  const med = median(wages);
-  const fmt = (n)=> n==null? '–' : n.toLocaleString('cs-CZ');
-  document.querySelector(`[data-id=count-${target}]`).textContent = rows.length;
-  document.querySelector(`[data-id=median-${target}]`).textContent = fmt(med);
-
-  // top employers
-  const cnt={}; rows.forEach(r=> cnt[r.zamestnavatel]=(cnt[r.zamestnavatel]||0)+1);
-  const top = Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  const ol = document.querySelector(`[data-id=top-${target}]`); ol.innerHTML='';
-  top.forEach(([name,c])=>{ const li=document.createElement('li'); li.textContent=`${name} (${c})`; ol.appendChild(li); });
-
-  // table
-  const tb = document.querySelector(`[data-id=tbl-${target}]`); tb.innerHTML='';
-  rows.forEach(r=>{
-    const tr=document.createElement('tr');
-    const mzda = (r.mzda_od? r.mzda_od.toLocaleString('cs-CZ'):'') + (r.mzda_do? '–'+r.mzda_do.toLocaleString('cs-CZ'):'');
-    tr.innerHTML = `<td>${r.profese||''}</td><td>${r.zamestnavatel||''}</td><td>${r.okres||''}</td><td>${mzda||''}</td><td>${r.datum||''}</td>`;
-    tb.appendChild(tr);
-  });
-}
-
-// Eventy
-Array.from(document.querySelectorAll('[data-role=load]')).forEach(btn=>{
-  btn.addEventListener('click', ()=> render(btn.dataset.target));
-});
-Array.from(document.querySelectorAll('select[data-role=region]')).forEach(sel=>{
-  sel.addEventListener('change', ()=> render(sel.dataset.target));
-});
-
-// auto render všeho
-['auto','agri','gastro'].forEach(render);
-</script>
+<script src="jobs-demo.js"></script>
 
 <div id="chat-trigger">?</div>
 

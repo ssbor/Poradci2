@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <title>Kuchař‑číšník – nabídky práce (SŠ Bor)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="chatbot.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="Domů">
+        <div class="brand-mark" style="background: linear-gradient(135deg, var(--red) 0%, #ef4444 100%);">SŠ</div>
+        <div>
+          <p class="brand-title">Střední škola Bor</p>
+          <p class="brand-sub">Možnosti uplatnění · Kuchař‑číšník</p>
+        </div>
+      </a>
+      <nav class="nav" aria-label="Hlavní navigace">
+        <a href="index.html#obory">Obory</a>
+        <a href="kurzy.html">Kurzy</a>
+        <a href="index.html#kontakt">Kontakt</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="section">
+      <div class="hero" style="background: linear-gradient(120deg, rgba(220,38,38,.95) 0%, rgba(239,68,68,.95) 100%);">
+        <div class="hero-grid">
+          <div>
+            <h1>Kuchař‑číšník <span class="badge">UKÁZKA</span></h1>
+            <p>Vyberte lokalitu a zobrazí se poslední nabídky. (Statická demo data bez serveru.)</p>
+            <ul class="checklist">
+              <li>Rychlý přehled: počet míst a medián mzdy</li>
+              <li>Top zaměstnavatelé v datech</li>
+              <li>Tabulka posledních nabídek</li>
+            </ul>
+            <div class="hero-actions">
+              <button class="btn btn--primary" data-role="load" data-target="gastro" style="background: var(--red); border-color: var(--red);">Aktualizovat přehled</button>
+              <a class="btn btn--ghost" href="index.html#obory">Zpět na obory</a>
+            </div>
+          </div>
+          <div class="card" style="border-color: rgba(255,255,255,.25); background: rgba(255,255,255,.14); color: #fff;">
+            <h3 style="margin-top:0; color:#fff;">Filtr lokality</h3>
+            <div class="toolbar" style="margin-top:.25rem">
+              <select class="select" data-role="region" data-target="gastro" aria-label="Vyberte kraj">
+                <option value="">Všechny lokality</option>
+                <option value="CZ032">Plzeňský kraj</option>
+                <option value="CZ041">Karlovarský kraj</option>
+                <option value="zahranici_bor">Zahraničí (do 70km od Boru)</option>
+              </select>
+            </div>
+            <p class="muted" style="color: rgba(255,255,255,.9); margin-top:.6rem">Tip: napište do chatu „kuchař“ a pak lokalitu.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="grid">
+        <div class="card col-6">
+          <h3>Přehled</h3>
+          <div>Počet míst: <b data-id="count">–</b></div>
+          <div>Medián spodní mzdy: <b data-id="median">–</b> Kč</div>
+          <div style="margin-top:.6rem"><span class="tag">CZ‑ISCO 5120 / 5131</span></div>
+        </div>
+        <div class="card col-6">
+          <h3>Top zaměstnavatelé</h3>
+          <ol data-id="top" style="margin:0; padding-left:1.1rem"></ol>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="card">
+        <h3>Poslední nabídky</h3>
+        <div class="table-wrap">
+          <table class="table" role="table" aria-label="Tabulka nabídek kuchař‑číšník">
+            <thead><tr>
+              <th>Profese</th><th>Zaměstnavatel</th><th>Okres</th><th>Mzda</th><th>Datum</th>
+            </tr></thead>
+            <tbody data-id="tbl"></tbody>
+          </table>
+        </div>
+        <p class="muted" style="margin-top:.75rem">Zdroj: Otevřená data MPSV / ÚP ČR (simulace bez serveru)</p>
+      </div>
+    </section>
+
+    <footer class="site-footer">
+      <div class="footer-grid">
+        <div>
+          <strong>SŠ Bor – poradci</strong>
+          <div class="muted">Stránka oboru pro přehled uplatnění.</div>
+        </div>
+        <div class="muted">Chcete přidat „Kurzy“ nebo „Praxe“? Napište a doplním.</div>
+      </div>
+    </footer>
+  </main>
+
+  <div id="chat-trigger">?</div>
+  <div id="chat-window">
+    <div class="chat-header">
+      <h3>Kariérový poradce</h3>
+      <p>Jak vám mohu pomoci?</p>
+    </div>
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="chat-input">
+      <input type="text" id="chat-input-field" placeholder="Napište svou zprávu...">
+      <button id="chat-send-btn">→</button>
+    </div>
+  </div>
+
+  <script src="jobs-demo.js"></script>
+  <script>
+    window.JobsDemo && window.JobsDemo.initOborPage('gastro');
+  </script>
+  <script src="chatbot.js"></script>
+</body>
+</html>
