@@ -1,3 +1,5 @@
+https://ssbor.github.io/Poradci2/
+
 # MPSV Daily Build – GitHub Pages
 
 Automatické denní stažení a zpracování datasetu MPSV (volná místa) → tři malé JSONy pro frontend.
