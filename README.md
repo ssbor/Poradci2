@@ -1,4 +1,4 @@
-# MPSV Monthly Build – GitHub Pages
+# MPSV Daily Build – GitHub Pages
 
 Automatické měsíční stažení a zpracování datasetu MPSV (volná místa) → malé JSONy pro frontend.
 
