@@ -1268,7 +1268,14 @@
           state.distances.clear();
           render(tag, state);
         }
-        await resolveOriginIfNeeded();
+        const ok = await resolveOriginIfNeeded();
+        if (ok) {
+          // If origin is already resolved, resolveOriginIfNeeded() is a no-op.
+          // Still apply the limit immediately and compute missing distances.
+          state.activeLimitKm = limitNow;
+          render(tag, state);
+          computeDistances(tag, state).catch(() => {});
+        }
       } else {
         render(tag, state);
       }
