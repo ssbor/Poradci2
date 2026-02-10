@@ -31,6 +31,19 @@
 
   const CZ_REGION_NAME_BY_CODE = Object.fromEntries(CZ_REGIONS.map((r) => [r.code, r.name]));
 
+  function normalizeLookupKey(s) {
+    return String(s || '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/\p{Diacritic}+/gu, '')
+      .replace(/\s+/g, ' ');
+  }
+
+  const CZ_REGION_CODE_BY_KEY = Object.fromEntries(
+    CZ_REGIONS.map((r) => [normalizeLookupKey(r.name), r.code])
+  );
+
   function median(arr) {
     if (!arr.length) return null;
     const s = [...arr].sort((a, b) => a - b);
@@ -181,12 +194,7 @@
   let OBCE_INDEX_LOADING = null;
 
   function normalizePlaceName(s) {
-    return String(s || '')
-      .trim()
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/\p{Diacritic}+/gu, '')
-      .replace(/\s+/g, ' ');
+    return normalizeLookupKey(s);
   }
 
   async function ensureObceIndexLoaded() {
@@ -243,6 +251,51 @@
 
     const options = idx.byName?.[nn];
     return pickClosestFromOptions(options, BOR_BIAS);
+  }
+
+  async function lookupObecCoordsDetailed(name, krajCode) {
+    const idx = await ensureObceIndexLoaded();
+    if (!idx) return { coords: null, candidates: 0, options: null, usedKraj: '' };
+
+    const nn = normalizePlaceName(name);
+    if (!nn) return { coords: null, candidates: 0, options: null, usedKraj: '' };
+
+    const kc = String(krajCode || '').trim();
+    if (kc && idx.byNameKraj && idx.byNameKraj[`${nn}|${kc}`]) {
+      const v = idx.byNameKraj[`${nn}|${kc}`];
+      if (v && Number.isFinite(Number(v.lat)) && Number.isFinite(Number(v.lon))) {
+        return {
+          coords: { lat: Number(v.lat), lon: Number(v.lon) },
+          candidates: 1,
+          options: null,
+          usedKraj: kc
+        };
+      }
+    }
+
+    const options = idx.byName?.[nn];
+    const coords = pickClosestFromOptions(options, BOR_BIAS);
+    return {
+      coords,
+      candidates: Array.isArray(options) ? options.length : 0,
+      options: Array.isArray(options) ? options : null,
+      usedKraj: ''
+    };
+  }
+
+  function parseOriginInputToObecAndKraj(val) {
+    const raw = String(val || '').trim();
+    if (!raw) return { obec: '', kraj: '' };
+    const parts = raw
+      .split(',')
+      .map((p) => String(p).trim())
+      .filter(Boolean);
+    const obec = parts[0] || '';
+    const hint = parts.slice(1).join(' ');
+    if (!hint) return { obec, kraj: '' };
+    const key = normalizeLookupKey(hint);
+    const kraj = CZ_REGION_CODE_BY_KEY[key] || '';
+    return { obec, kraj };
   }
 
   function pickClosestResult(results, bias) {
@@ -926,6 +979,7 @@
       distanceComputeBatches: 0,
       computeMoreScheduled: false,
       geocodeBlockedUntil: 0,
+      originAmbiguityHintFor: '',
       geoCache: loadGeoCache(),
       offerKey: (o) =>
         [o.cz_isco || '', o.zamestnavatel || '', o.okres || o.lokalita || '', o.datum || ''].join('|')
@@ -1135,12 +1189,49 @@
 
       try {
         // For municipality names, prefer offline lookup (instant).
-        const local = await lookupObecCoords(val, '');
-        const coords = local || (await geocodeOnce(val + ', Czechia'));
+        const parsed = parseOriginInputToObecAndKraj(val);
+        const selectedRegion = normalizeRegionValue(regionSel ? regionSel.value : '');
+        const krajHint = parsed.kraj || selectedRegion;
+        const detail = await lookupObecCoordsDetailed(parsed.obec || val, krajHint);
+        const coords = detail.coords || (await geocodeOnce(val + ', Czechia'));
         if (!coords) {
           if (statusEl) statusEl.textContent = 'Nepodařilo se najít polohu pro: ' + val;
           return false;
         }
+
+        // If the municipality name is ambiguous and the user didn't specify a region,
+        // show a short one-time hint how to disambiguate.
+        try {
+          const isPlain = !val.includes(',');
+          if (
+            isPlain &&
+            !krajHint &&
+            detail &&
+            detail.candidates > 1 &&
+            state.originAmbiguityHintFor !== val
+          ) {
+            state.originAmbiguityHintFor = val;
+            const codes = Array.from(
+              new Set((detail.options || []).map((o) => String(o?.k || '').trim()).filter(Boolean))
+            ).slice(0, 2);
+            const names = codes.map((c) => CZ_REGION_NAME_BY_CODE[c] || c).filter(Boolean);
+            const example = names.length ? `, ${names[0]}` : '';
+            if (statusEl) {
+              statusEl.textContent =
+                `Pozn.: Obec „${parsed.obec || val}“ existuje ve více krajích` +
+                (names.length ? ` (např. ${names.join(', ')})` : '') +
+                `. Zkuste napsat „${parsed.obec || val}${example}“.`;
+              setTimeout(() => {
+                if (statusEl && statusEl.textContent && statusEl.textContent.startsWith('Pozn.:')) {
+                  statusEl.textContent = '';
+                }
+              }, 7000);
+            }
+          }
+        } catch {
+          // ignore
+        }
+
         state.userLoc = coords;
         state.originText = val;
         state.originResolved = val;
