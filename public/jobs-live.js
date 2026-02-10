@@ -208,7 +208,11 @@
     base.searchParams.set('accept-language', 'cs');
 
     const res = await fetch(base.toString());
-    if (!res.ok) throw new Error('Geocode HTTP ' + res.status);
+    if (!res.ok) {
+      const err = new Error('Geocode HTTP ' + res.status);
+      err.httpStatus = res.status;
+      throw err;
+    }
     const js = await res.json();
     return pickClosestResult(js, BOR_BIAS);
   }
@@ -491,6 +495,7 @@
       // While we're still computing (or can compute more), don't go blank.
       // Show nearby results as soon as we have them; otherwise keep the list visible and continue.
       const knownWithin = filterKnownWithin(rows);
+      const hasAnyDistance = state.distances && state.distances.size > 0;
       const canComputeMore =
         (state.remainingGeoQueries || 0) > 0 && (state.distanceComputeBatches || 0) < 4;
 
@@ -498,7 +503,13 @@
         if (statusEl) statusEl.textContent = '';
         rows = knownWithin;
       } else if (state.isComputingDistances || canComputeMore) {
-        if (statusEl) statusEl.textContent = 'Počítám dojezd…';
+        if (statusEl) {
+          if (state.geocodeBlockedUntil && Date.now() < state.geocodeBlockedUntil) {
+            statusEl.textContent = 'Dojezd teď nejde spočítat (omezení geokódování). Zkuste to za chvíli.';
+          } else {
+            statusEl.textContent = 'Počítám dojezd…';
+          }
+        }
         if (!state.isComputingDistances && !state.computeMoreScheduled && canComputeMore) {
           state.computeMoreScheduled = true;
           computeDistances(tag, state)
@@ -509,9 +520,21 @@
         }
         // keep rows unfiltered while we compute
       } else {
-        if (statusEl) statusEl.textContent = '';
-        // final strict filter
-        rows = filterKnownWithin(rows);
+        // If we couldn't compute any distances at all, do not blank the table.
+        // This commonly happens when Nominatim rate-limits browser requests.
+        if (!hasAnyDistance) {
+          if (statusEl) {
+            statusEl.textContent =
+              state.geocodeBlockedUntil && Date.now() < state.geocodeBlockedUntil
+                ? 'Dojezd teď nejde spočítat (omezení geokódování). Zkuste to za chvíli.'
+                : 'Dojezd se nepodařilo spočítat.';
+          }
+          // keep rows unfiltered
+        } else {
+          if (statusEl) statusEl.textContent = '';
+          // final strict filter
+          rows = filterKnownWithin(rows);
+        }
       }
     }
 
@@ -652,6 +675,14 @@
     if (state.isComputingDistances) return;
     // Only compute distances when a km radius filter is active.
     if (!(Number.isFinite(state.activeLimitKm) && state.activeLimitKm != null)) return;
+
+    // If geocoding was rate-limited recently, wait a bit before trying again.
+    if (state.geocodeBlockedUntil && Date.now() < state.geocodeBlockedUntil) {
+      state.remainingGeoQueries = Math.max(0, Number(state.remainingGeoQueries || 0));
+      render(tag, state);
+      return;
+    }
+
     state.isComputingDistances = true;
 
     const cache = state.geoCache;
@@ -691,41 +722,66 @@
       state.remainingGeoQueries = uniqueQueries.length;
       state.distanceComputeBatches = Number(state.distanceComputeBatches || 0) + 1;
 
-      // polite throttling (and avoid too many requests)
-      const MAX_LOOKUPS = 30;
+      // Polite throttling for public Nominatim.
+      // 1 req/sec is the safe baseline; browsers also share limits across tabs.
+      const MAX_LOOKUPS = 15;
       const todo = uniqueQueries
         .sort((a, b) => (queryCounts.get(b) || 0) - (queryCounts.get(a) || 0))
         .slice(0, MAX_LOOKUPS);
 
+      let transientFailures = 0;
       for (let i = 0; i < todo.length; i++) {
         const q = todo[i];
         try {
           const coords = await geocodeOnce(q);
           if (coords && Number.isFinite(coords.lat) && Number.isFinite(coords.lon)) {
             cache[q] = coords;
-            saveGeoCache(cache);
           } else {
             cache[q] = null;
-            saveGeoCache(cache);
           }
-        } catch {
-          // store null to prevent hammering
+        } catch (e) {
+          const status = Number(e?.httpStatus);
+          const isTransient = status === 429 || status === 503 || status === 502 || status === 504;
+          const isForbidden = status === 403;
+
+          if (isTransient || isForbidden) {
+            transientFailures++;
+            // Do not poison cache with null; we want to retry later.
+            // Back off for a while and stop this batch early.
+            state.geocodeBlockedUntil = Date.now() + (isForbidden ? 5 * 60_000 : 60_000);
+            break;
+          }
+
+          // Non-transient failure: store null to prevent hammering
           cache[q] = null;
-          saveGeoCache(cache);
         }
+
+        // Persist cache occasionally (not every request).
+        if (i % 5 === 4) saveGeoCache(cache);
 
         // Update distances incrementally so the km filter works immediately.
         applyDistancesFromCache();
         render(tag, state);
 
-        // Keep it reasonably fast while still being polite.
-        await sleep(650);
+        // Keep it slow enough for public Nominatim.
+        await sleep(1100);
       }
+
+      // Save any remaining cache changes.
+      saveGeoCache(cache);
 
       applyDistancesFromCache();
       render(tag, state);
 
-      state.remainingGeoQueries = Math.max(0, uniqueQueries.length - todo.length);
+      // Recompute remaining queries after this batch (some may be cached/null now).
+      state.remainingGeoQueries = Array.from(queryCounts.keys()).filter(
+        (q) => !Object.prototype.hasOwnProperty.call(cache, q)
+      ).length;
+
+      // If we got rate-limited, keep remainingGeoQueries non-zero so UI can retry later.
+      if (transientFailures > 0 && state.remainingGeoQueries === 0) {
+        state.remainingGeoQueries = uniqueQueries.length;
+      }
     } finally {
       state.isComputingDistances = false;
 
@@ -764,6 +820,7 @@
       remainingGeoQueries: 0,
       distanceComputeBatches: 0,
       computeMoreScheduled: false,
+      geocodeBlockedUntil: 0,
       geoCache: loadGeoCache(),
       offerKey: (o) =>
         [o.cz_isco || '', o.zamestnavatel || '', o.okres || o.lokalita || '', o.datum || ''].join('|')
@@ -1094,6 +1151,7 @@
         state.distanceComputeBatches = 0;
         state.remainingGeoQueries = 0;
         state.computeMoreScheduled = false;
+        state.geocodeBlockedUntil = 0;
         const { statusEl } = getInputs(tag);
         if (statusEl) statusEl.textContent = '';
         render(tag, state);
