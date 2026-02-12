@@ -207,8 +207,10 @@ a:hover{ text-decoration: underline; }
 }
 
 /* Pager select: add a visible dropdown arrow (native arrow is hidden by appearance:none) */
-div[data-role="pager"][data-pos="top"] select[data-role="page-size"]{
+div[data-role="pager"] select.select[data-role="page-size"],
+select.select[data-role="skoly-page-size"]{
   padding-right: 2.15rem;
+  cursor: pointer;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.25 6 6.25 11 1.25' fill='none' stroke='%2364718a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right .85rem center;
@@ -501,6 +503,15 @@ form[data-role="skoly-form"] .select{
   font-weight: 500;
 }
 form[data-role="skoly-form"] .input::placeholder{ font-weight: 500; }
+
+form[data-role="skoly-form"] select.select{
+  padding-right: 2.05rem;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.25 6 6.25 11 1.25' fill='none' stroke='%2364718a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right .75rem center;
+  background-size: 12px 8px;
+}
 
 /* Vzdělání: put filters next to the search field */
 form[data-role="skoly-form"] .skoly-top-row{
