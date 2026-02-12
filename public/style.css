@@ -497,8 +497,10 @@ form[data-role="skoly-form"] .input,
 form[data-role="skoly-form"] .select{
   padding: 9px 10px;
   border-radius: 11px;
-  font-size: .9rem;
+  font-size: .82rem;
+  font-weight: 500;
 }
+form[data-role="skoly-form"] .input::placeholder{ font-weight: 500; }
 
 /* Vzdělání: put filters next to the search field */
 form[data-role="skoly-form"] .skoly-top-row{
