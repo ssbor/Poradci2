@@ -208,13 +208,25 @@
 
   function scrollResultsToTop(outEl) {
     if (!outEl) return;
-    const topPager = outEl.querySelector('[data-role=skoly-pager][data-pos=top]');
-    const target = topPager || outEl.closest('section') || outEl;
+
+    // Prefer scrolling to the filter form (requested), not just the pager.
+    const section = outEl.closest('section') || document;
+    const form = section.querySelector('[data-role=skoly-form]');
+    const fallback = outEl.querySelector('[data-role=skoly-pager][data-pos=top]') || outEl;
+    const target = form || fallback;
+
+    const header = document.querySelector('.site-header');
+    const headerH = header ? Math.ceil(header.getBoundingClientRect().height) : 0;
+    const pad = 12;
+
     requestAnimationFrame(() => {
+      const rect = target.getBoundingClientRect();
+      const top = rect.top + window.scrollY - headerH - pad;
+      const y = Math.max(0, Math.floor(top));
       try {
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.scrollTo({ top: y, behavior: 'smooth' });
       } catch {
-        target.scrollIntoView(true);
+        window.scrollTo(0, y);
       }
     });
   }
