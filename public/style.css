@@ -492,12 +492,12 @@ div[data-role="pager"][data-pos="top"] select[data-role="page-size"]{
 
 /* Vzdělání: slightly more compact filter boxes */
 form[data-role="skoly-form"] .field{ gap: .25rem; }
-form[data-role="skoly-form"] .field__label{ font-size: .92rem; }
+form[data-role="skoly-form"] .field__label{ font-size: .88rem; }
 form[data-role="skoly-form"] .input,
 form[data-role="skoly-form"] .select{
   padding: 9px 10px;
   border-radius: 11px;
-  font-size: 1.05rem;
+  font-size: 1.0rem;
 }
 
 /* Vzdělání: put filters next to the search field */
