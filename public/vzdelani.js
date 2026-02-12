@@ -303,16 +303,29 @@
     const progHtml = matches
       .slice(0, 6)
       .map((p) => {
-        const chips = [p.forma ? labelForma(p.forma) : '', p.stupen ? labelStupenVzdelani(p.stupen) : '']
-          .filter(Boolean)
-          .map((x) => `<span class="tag" style="margin-right:.35rem">${escapeHtml(x)}</span>`)
-          .join('');
+        const codeHtml = p.code ? `<div class="program-row__meta">${escapeHtml(p.code)}</div>` : '';
+        const formaChip = p.forma
+          ? `<span class="tag tag--kv"><span class="tag__k">Forma</span><span class="tag__sep">·</span><span class="tag__v">${escapeHtml(
+              labelForma(p.forma)
+            )}</span></span>`
+          : `<span class="muted">—</span>`;
 
-        const code = p.code ? `<span class="muted">${escapeHtml(p.code)}</span> · ` : '';
-        return `<div style="margin:.35rem 0">
-          <div><b>${escapeHtml(p.name || '')}</b></div>
-          <div class="muted" style="margin-top:.15rem">${code}${chips}</div>
-        </div>`;
+        const stupenChip = p.stupen
+          ? `<span class="tag tag--kv"><span class="tag__k">Stupeň</span><span class="tag__sep">·</span><span class="tag__v">${escapeHtml(
+              labelStupenVzdelani(p.stupen)
+            )}</span></span>`
+          : `<span class="muted">—</span>`;
+
+        return `
+          <div class="program-row">
+            <div>
+              <div><b>${escapeHtml(p.name || '')}</b></div>
+              ${codeHtml}
+            </div>
+            <div>${formaChip}</div>
+            <div>${stupenChip}</div>
+          </div>
+        `;
       })
       .join('');
 
@@ -327,8 +340,14 @@
           ${escapeHtml([addr.ulice, [addr.cisloDomovni, addr.cisloOrientacni].filter(Boolean).join('/')].filter(Boolean).join(' '))}
         </div>
         <div style="margin-top:.9rem">
-          <div class="muted" style="font-weight:800">Nalezené obory</div>
-          ${progHtml || `<div class="muted" style="margin-top:.4rem">Nenalezeny žádné obory.</div>`}
+          <div class="programs-head">
+            <div class="programs-head__title">Nalezené obory</div>
+            <div class="programs-head__col">Forma studia</div>
+            <div class="programs-head__col">Stupeň vzdělání</div>
+          </div>
+          <div class="programs-list">
+            ${progHtml || `<div class="muted" style="margin-top:.4rem">Nenalezeny žádné obory.</div>`}
+          </div>
         </div>
         <div style="margin-top:.9rem; display:flex; gap:.6rem; flex-wrap:wrap">
           ${urlHtml}

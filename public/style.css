@@ -426,6 +426,64 @@ div[data-role="pager"][data-pos="top"] select[data-role="page-size"]{
 .table td.td-date{ white-space: nowrap; }
 
 .tag{ display:inline-flex; align-items:center; width: fit-content; font-size:.82rem; background:#eaf2ff; color:#244a8e; padding:.18rem .45rem; border-radius:999px; white-space: nowrap; }
+.tag--kv{
+  gap: .35rem;
+  padding: .14rem .35rem;
+  border: 1px solid rgba(19,102,214,.16);
+}
+.tag--kv .tag__k{
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .2px;
+  color: rgba(36,74,142,.92);
+  opacity: .95;
+}
+.tag--kv .tag__sep{ opacity: .55; }
+.tag--kv .tag__v{ font-weight: 850; }
+
+/* Vzdělání: "Nalezené obory" header with columns (desktop) */
+.programs-head{
+  display:grid;
+  grid-template-columns: 1fr 140px 210px;
+  gap: .75rem;
+  align-items: baseline;
+  margin-top: .9rem;
+}
+.programs-head__title{
+  color: var(--muted);
+  font-weight: 800;
+}
+.programs-head__col{
+  color: var(--muted);
+  font-weight: 800;
+  font-size: .82rem;
+  text-align:left;
+}
+
+.programs-list{ margin-top: .35rem; }
+.program-row{
+  display:grid;
+  grid-template-columns: 1fr 140px 210px;
+  gap: .75rem;
+  padding: .35rem 0;
+}
+.program-row + .program-row{ border-top: 1px dashed rgba(231,238,248,.95); }
+.program-row__meta{ color: var(--muted); margin-top: .1rem; }
+
+/* In desktop column layout, hide chip key (Forma/Stupeň) to keep the old simple look */
+.programs-list .tag--kv .tag__k,
+.programs-list .tag--kv .tag__sep{ display:none; }
+.programs-list .tag--kv{ padding: .16rem .45rem; }
+
+@media (max-width: 760px){
+  .programs-head{ display:none; }
+  .program-row{ grid-template-columns: 1fr; gap: .2rem; border-top: none; }
+  .program-row + .program-row{ border-top: 1px dashed rgba(231,238,248,.95); }
+  /* On mobile, show the chip keys again */
+  .programs-list .tag--kv .tag__k,
+  .programs-list .tag--kv .tag__sep{ display:inline; }
+  .programs-list .tag--kv{ padding: .14rem .35rem; }
+}
 .badge{ font-size:.72rem; background:#fff; color:#124a9a; padding:.15rem .45rem; border-radius:999px; border:1px solid rgba(255,255,255,.65); }
 
 /* Vzdělání: slightly more compact filter boxes */
