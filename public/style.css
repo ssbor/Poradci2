@@ -254,6 +254,41 @@ select.select[data-role="skoly-page-size"]{
 }
 .btn--courses:hover{ background: linear-gradient(120deg, #ea580c 0%, #f97316 100%); }
 
+.btn--purple-dark{
+  background: linear-gradient(120deg, #4338ca 0%, #7c3aed 100%);
+  border-color: rgba(0,0,0,.35);
+  color: #fff;
+}
+.btn--purple-dark:hover{ background: linear-gradient(120deg, #3730a3 0%, #6d28d9 100%); }
+
+.btn--orange-dark{
+  background: linear-gradient(120deg, #ea580c 0%, #f97316 100%);
+  border-color: rgba(0,0,0,.35);
+  color: #fff;
+}
+.btn--orange-dark:hover{ background: linear-gradient(120deg, #c2410c 0%, #ea580c 100%); }
+
+.btn--primary-dark{
+  background: linear-gradient(120deg, var(--primary-700) 0%, var(--primary) 100%);
+  border-color: rgba(0,0,0,.35);
+  color: #fff;
+}
+.btn--primary-dark:hover{ background: linear-gradient(120deg, #0b3d82 0%, var(--primary-700) 100%); }
+
+.btn--green-dark{
+  background: linear-gradient(120deg, var(--green-700) 0%, var(--green) 100%);
+  border-color: rgba(0,0,0,.35);
+  color: #fff;
+}
+.btn--green-dark:hover{ background: linear-gradient(120deg, #0f6a31 0%, var(--green-700) 100%); }
+
+.btn--red-dark{
+  background: linear-gradient(120deg, var(--red-700) 0%, var(--red) 100%);
+  border-color: rgba(0,0,0,.35);
+  color: #fff;
+}
+.btn--red-dark:hover{ background: linear-gradient(120deg, #991b1b 0%, var(--red-700) 100%); }
+
 .card--obor{ position: relative; overflow:hidden; }
 .card--obor::before{
   content:"";
