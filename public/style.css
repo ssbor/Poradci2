@@ -444,8 +444,8 @@ div[data-role="pager"][data-pos="top"] select[data-role="page-size"]{
 /* Vzdělání: "Nalezené obory" header with columns (desktop) */
 .programs-head{
   display:grid;
-  grid-template-columns: 1fr 140px 210px;
-  gap: .75rem;
+  grid-template-columns: minmax(0, 1fr) 120px minmax(0, 260px);
+  gap: .6rem;
   align-items: baseline;
   margin-top: .9rem;
 }
@@ -463,10 +463,12 @@ div[data-role="pager"][data-pos="top"] select[data-role="page-size"]{
 .programs-list{ margin-top: .35rem; }
 .program-row{
   display:grid;
-  grid-template-columns: 1fr 140px 210px;
-  gap: .75rem;
+  grid-template-columns: minmax(0, 1fr) 120px minmax(0, 260px);
+  gap: .6rem;
   padding: .35rem 0;
 }
+.program-row > div{ min-width: 0; }
+.program-row b{ overflow-wrap: anywhere; }
 .program-row + .program-row{ border-top: 1px dashed rgba(231,238,248,.95); }
 .program-row__meta{ color: var(--muted); margin-top: .1rem; }
 
@@ -474,6 +476,8 @@ div[data-role="pager"][data-pos="top"] select[data-role="page-size"]{
 .programs-list .tag--kv .tag__k,
 .programs-list .tag--kv .tag__sep{ display:none; }
 .programs-list .tag--kv{ padding: .16rem .45rem; }
+/* Allow long labels (e.g. 'maturita + výuční list') to wrap instead of overflowing */
+.programs-list .tag{ max-width: 100%; white-space: normal; }
 
 @media (max-width: 760px){
   .programs-head{ display:none; }
