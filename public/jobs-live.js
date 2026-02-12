@@ -290,12 +290,21 @@
       .split(',')
       .map((p) => String(p).trim())
       .filter(Boolean);
-    const obec = parts[0] || '';
+    const obec = stripOriginDecorations(parts[0] || '');
     const hint = parts.slice(1).join(' ');
     if (!hint) return { obec, kraj: '' };
     const key = normalizeLookupKey(hint);
     const kraj = CZ_REGION_CODE_BY_KEY[key] || '';
     return { obec, kraj };
+  }
+
+  function stripOriginDecorations(s) {
+    // Allow users to type things like "Planá (okres Tachov)" or other hints.
+    return String(s || '')
+      .replace(/\([^)]*\)/g, ' ')
+      .replace(/\bokres\b\s+[^,]+$/i, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   function escapeHtmlAttr(s) {
@@ -434,7 +443,7 @@
 
     const update = debounce(async () => {
       const raw = String(originEl.value || '').trim();
-      const q = raw.split(',')[0].trim();
+      const q = stripOriginDecorations(raw.split(',')[0].trim());
       const key = normalizeLookupKey(q);
 
       if (!key || key.length < 2) {
@@ -470,7 +479,25 @@
       };
 
       const out = rank(starts).concat(rank(contains)).slice(0, 12);
-      renderItems(out);
+      if (out.length) {
+        renderItems(out);
+        return;
+      }
+
+      // If nothing matches offline, offer online search (Nominatim fallback).
+      // This helps for places outside the municipality list.
+      if (q && q.length >= 2) {
+        renderItems([
+          {
+            label: `Hledat online: ${q}`,
+            fill: q,
+            nameKey: key,
+            kraj: ''
+          }
+        ]);
+      } else {
+        hide();
+      }
     }, 80);
 
     originEl.addEventListener('input', () => {
