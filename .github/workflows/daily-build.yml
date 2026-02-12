@@ -7,6 +7,11 @@ on:
   push:
     branches: [ main ]
 
+# Prevent concurrent Pages deployments (deploy-pages API rejects when one is already in progress).
+concurrency:
+  group: "pages-deploy"
+  cancel-in-progress: true
+
 
 jobs:
   build:
@@ -20,10 +25,6 @@ jobs:
       contents: read
       pages: write
       id-token: write
-    concurrency:
-      group: "pages-deploy"
-      cancel-in-progress: true
-
     steps:
       - uses: actions/checkout@v4
 
