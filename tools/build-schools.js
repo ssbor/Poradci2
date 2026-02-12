@@ -137,6 +137,14 @@ function buildIndex(rawSchools, maps) {
     if (!id || !name) continue;
 
     const addr = s?.adresaSidla || {};
+
+    const uliceRaw = addr?.ulice;
+    const ulice =
+      typeof uliceRaw === 'string'
+        ? uliceRaw
+        : typeof uliceRaw === 'object' && uliceRaw
+          ? uliceRaw?.nazev?.cs ?? uliceRaw?.nazev ?? ''
+          : '';
     const krajId = String(addr?.kraj?.id || '').trim();
     const okresId = String(addr?.okres?.id || '').trim();
     const obecId = String(addr?.obec?.id || '').trim();
@@ -183,7 +191,7 @@ function buildIndex(rawSchools, maps) {
       typZrizovatele: String(s?.typZrizovatele?.id || '').trim(),
       adresa: {
         psc: String(addr?.psc || '').trim(),
-        ulice: String(addr?.ulice || '').trim(),
+        ulice: String(ulice || '').trim(),
         cisloDomovni: String(addr?.cisloDomovni || '').trim(),
         cisloOrientacni: String(addr?.cisloOrientacni || '').trim(),
         obecId,

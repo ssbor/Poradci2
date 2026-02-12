@@ -35,10 +35,21 @@
     const k = shortId(id);
     if (!k) return '';
     const m = {
-      denni: 'Denní',
+      // MPSV codes seen in data: prez, komb, dal, vec, dist, den, jina
+      prez: 'Prezenční',
+      den: 'Denní',
       komb: 'Kombinované',
+      dal: 'Dálkové',
+      vec: 'Večerní',
+      dist: 'Distanční',
+      jina: 'Jiná',
+
+      // fallback/synonyms (just in case)
+      denni: 'Denní',
       dalk: 'Dálkové',
-      vecer: 'Večerní'
+      dalkove: 'Dálkové',
+      vecer: 'Večerní',
+      vecerni: 'Večerní'
     };
     return m[k] || k;
   }
@@ -47,9 +58,17 @@
     const k = shortId(id);
     if (!k) return '';
     const m = {
+      // MPSV codes seen in data: abs, jin, mat, ne, stzk, zavz, zzvl
+      mat: 'Maturitní zkouška',
+      stzk: 'Státní závěrečná zkouška',
+      zavz: 'Závěrečná zkouška',
+      zzvl: 'Závěrečná zkouška + výuční list',
+      abs: 'Absolutorium',
+      ne: 'Bez ukončení',
+      jin: 'Jiné',
+
+      // fallback/synonyms (just in case)
       vyuc: 'Výuční list',
-      stzk: 'Maturita',
-      prij: 'Přijímací zkoušky',
       zavr: 'Závěrečná zkouška'
     };
     return m[k] || k;
@@ -125,6 +144,68 @@
     `;
   }
 
+  function ensureResultsUI(outEl) {
+    if (!outEl) return null;
+
+    const existing = outEl.querySelector('[data-role=skoly-results-wrap]');
+    if (existing) {
+      return {
+        wrap: existing,
+        listEl: existing.querySelector('[data-role=skoly-list]'),
+        topPager: existing.querySelector('[data-role=skoly-pager][data-pos=top]'),
+        bottomPager: existing.querySelector('[data-role=skoly-pager][data-pos=bottom]')
+      };
+    }
+
+    const wrap = document.createElement('div');
+    wrap.setAttribute('data-role', 'skoly-results-wrap');
+
+    const makePager = (pos) => {
+      const right =
+        pos === 'top'
+          ? `
+        <div class="pager__right">
+          <span class="pager__label">Na stránce</span>
+          <select class="select" data-role="skoly-page-size" aria-label="Počet škol na stránce">
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="30" selected>30</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="all">Vše</option>
+          </select>
+        </div>
+      `
+          : '';
+
+      return `
+        <div class="pager" data-role="skoly-pager" data-pos="${pos}">
+          <div class="pager__left">
+            <button class="btn btn--ghost" data-role="skoly-page-prev" type="button" aria-label="Předchozí stránka">←</button>
+            <div class="pager__info" data-role="skoly-page-info">Stránka 1/1</div>
+            <button class="btn btn--ghost" data-role="skoly-page-next" type="button" aria-label="Další stránka">→</button>
+          </div>
+          ${right}
+        </div>
+      `;
+    };
+
+    wrap.innerHTML = `
+      ${makePager('top')}
+      <div data-role="skoly-list"></div>
+      ${makePager('bottom')}
+    `;
+
+    outEl.appendChild(wrap);
+
+    return {
+      wrap,
+      listEl: wrap.querySelector('[data-role=skoly-list]'),
+      topPager: wrap.querySelector('[data-role=skoly-pager][data-pos=top]'),
+      bottomPager: wrap.querySelector('[data-role=skoly-pager][data-pos=bottom]')
+    };
+  }
+
   async function init() {
     const form = document.querySelector('[data-role=skoly-form]');
     const qEl = document.querySelector('input[data-role=skoly-q]');
@@ -147,6 +228,9 @@
     }
 
     const schools = Array.isArray(data?.schools) ? data.schools : [];
+
+    const ui = ensureResultsUI(outEl);
+    const listEl = ui?.listEl || outEl;
 
     // Build filter options from data
     const krajMap = new Map();
@@ -183,7 +267,23 @@
 
     statusEl.textContent = `Načteno: ${schools.length} škol / ${Number(data?.count_programs || 0)} oborů.`;
 
-    const runSearch = () => {
+    const state = {
+      page: 1,
+      pageSize: 30
+    };
+
+    let lastKey = '';
+    let lastHits = [];
+
+    const criteriaKey = () => {
+      const q = normalizeKey(String(qEl?.value || '').trim());
+      const krajId = String(krajEl?.value || '').trim();
+      const forma = String(formaEl?.value || '').trim();
+      const ukonceni = String(ukEl?.value || '').trim();
+      return JSON.stringify([q, krajId, forma, ukonceni]);
+    };
+
+    const computeHits = () => {
       const qRaw = String(qEl?.value || '').trim();
       const q = normalizeKey(qRaw);
       const tokens = q.split(' ').filter(Boolean);
@@ -224,37 +324,104 @@
 
       hits.sort((a, b) => b.score - a.score || String(a.s?.name || '').localeCompare(String(b.s?.name || ''), 'cs'));
 
-      const limited = hits.slice(0, 30);
-      outEl.innerHTML = '';
+      return hits;
+    };
 
-      if (!limited.length) {
+    const renderPage = () => {
+      const hits = lastHits;
+
+      const pageSizeRaw = state.pageSize;
+      const size = pageSizeRaw === 'all' ? hits.length : Number(pageSizeRaw || 30);
+      const safeSize = Number.isFinite(size) && size > 0 ? size : 30;
+      const totalPages = Math.max(1, Math.ceil(hits.length / safeSize));
+      state.page = Math.min(Math.max(1, Number(state.page || 1)), totalPages);
+
+      const from = (state.page - 1) * safeSize;
+      const to = from + safeSize;
+      const pageHits = pageSizeRaw === 'all' ? hits : hits.slice(from, to);
+
+      if (!hits.length) {
         statusEl.textContent = 'Nic nenalezeno. Zkuste kratší dotaz (např. „nástavba“, „svářeč“, „Plzeň“).';
-        return;
+        if (listEl) listEl.innerHTML = '';
+      } else {
+        statusEl.textContent = `Nalezeno: ${hits.length} škol · Stránka ${state.page}/${totalPages} (zobrazuju ${pageHits.length}).`;
+        const html = pageHits
+          .map((h) => createResultCard(h.s, h.programs.length ? h.programs : h.s.programs || []))
+          .join('');
+        if (listEl) listEl.innerHTML = html;
       }
 
-      statusEl.textContent = `Nalezeno: ${hits.length} škol (zobrazuju ${limited.length}).`;
+      // pager UI update
+      outEl
+        .querySelectorAll('[data-role=skoly-page-info]')
+        .forEach((el) => (el.textContent = `Stránka ${state.page}/${Math.max(1, totalPages)}`));
 
-      const html = limited
-        .map((h) => createResultCard(h.s, h.programs.length ? h.programs : h.s.programs || []))
-        .join('');
-      outEl.innerHTML = html;
+      outEl
+        .querySelectorAll('button[data-role=skoly-page-prev]')
+        .forEach((btn) => (btn.disabled = state.page <= 1 || totalPages <= 1));
+      outEl
+        .querySelectorAll('button[data-role=skoly-page-next]')
+        .forEach((btn) => (btn.disabled = state.page >= totalPages || totalPages <= 1));
+
+      const desired = String(state.pageSize || '30');
+      outEl.querySelectorAll('select[data-role=skoly-page-size]').forEach((sel) => {
+        if (String(sel.value) !== desired) sel.value = desired;
+      });
     };
+
+    const runSearch = ({ resetPage = false } = {}) => {
+      const key = criteriaKey();
+      const changed = key !== lastKey;
+      if (changed) {
+        lastKey = key;
+        lastHits = computeHits();
+      }
+      if (resetPage || changed) state.page = 1;
+      renderPage();
+    };
+
+    // pager handlers
+    outEl?.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+
+      if (t.matches('button[data-role=skoly-page-prev]')) {
+        state.page = Math.max(1, Number(state.page || 1) - 1);
+        renderPage();
+        return;
+      }
+      if (t.matches('button[data-role=skoly-page-next]')) {
+        state.page = Number(state.page || 1) + 1;
+        renderPage();
+        return;
+      }
+    });
+
+    outEl?.addEventListener('change', (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLSelectElement)) return;
+      if (!t.matches('select[data-role=skoly-page-size]')) return;
+      const val = String(t.value || '30');
+      state.pageSize = val === 'all' ? 'all' : Number(val) || 30;
+      state.page = 1;
+      renderPage();
+    });
 
     form?.addEventListener('submit', (e) => {
       e.preventDefault();
-      runSearch();
+      runSearch({ resetPage: true });
     });
 
     qEl?.addEventListener('input', () => {
       // light debounce without timers: only run when query is reasonably long
-      if (String(qEl.value || '').trim().length >= 3) runSearch();
+      if (String(qEl.value || '').trim().length >= 3) runSearch({ resetPage: true });
     });
-    krajEl?.addEventListener('change', runSearch);
-    formaEl?.addEventListener('change', runSearch);
-    ukEl?.addEventListener('change', runSearch);
+    krajEl?.addEventListener('change', () => runSearch({ resetPage: true }));
+    formaEl?.addEventListener('change', () => runSearch({ resetPage: true }));
+    ukEl?.addEventListener('change', () => runSearch({ resetPage: true }));
 
     // initial view
-    runSearch();
+    runSearch({ resetPage: true });
   }
 
   if (document.readyState === 'loading') {
