@@ -242,15 +242,45 @@
     if (!nn) return null;
 
     const kc = String(krajCode || '').trim();
-    if (kc && idx.byNameKraj && idx.byNameKraj[`${nn}|${kc}`]) {
-      const v = idx.byNameKraj[`${nn}|${kc}`];
-      if (v && Number.isFinite(Number(v.lat)) && Number.isFinite(Number(v.lon))) {
-        return { lat: Number(v.lat), lon: Number(v.lon) };
-      }
+    const byNameKraj = idx.byNameKraj || {};
+    const hit = kc ? byNameKraj[`${nn}|${kc}`] : null;
+    const hitArr = Array.isArray(hit) ? hit : hit ? [hit] : null;
+    if (kc && hitArr && hitArr.length) {
+      const coords = pickClosestFromOptions(hitArr, BOR_BIAS);
+      if (coords) return coords;
     }
 
     const options = idx.byName?.[nn];
-    return pickClosestFromOptions(options, BOR_BIAS);
+    if (options) return pickClosestFromOptions(options, BOR_BIAS);
+
+    // Fuzzy fallback for multi-word names (match all tokens in any order).
+    if (nn.includes(' ') && idx.byName) {
+      const tokens = nn.split(' ').map((t) => t.trim()).filter((t) => t.length >= 2);
+      if (tokens.length >= 2) {
+        const fuzzy = [];
+        const keys = Object.keys(idx.byName);
+        for (const k of keys) {
+          let ok = true;
+          for (const t of tokens) {
+            if (!k.includes(t)) {
+              ok = false;
+              break;
+            }
+          }
+          if (!ok) continue;
+          const arr = idx.byName[k] || [];
+          for (const it of arr) {
+            fuzzy.push(it);
+            if (fuzzy.length >= 80) break;
+          }
+          if (fuzzy.length >= 80) break;
+        }
+        const coords = pickClosestFromOptions(fuzzy, BOR_BIAS);
+        if (coords) return coords;
+      }
+    }
+
+    return null;
   }
 
   async function lookupObecCoordsDetailed(name, krajCode) {
@@ -261,19 +291,49 @@
     if (!nn) return { coords: null, candidates: 0, options: null, usedKraj: '' };
 
     const kc = String(krajCode || '').trim();
-    if (kc && idx.byNameKraj && idx.byNameKraj[`${nn}|${kc}`]) {
-      const v = idx.byNameKraj[`${nn}|${kc}`];
-      if (v && Number.isFinite(Number(v.lat)) && Number.isFinite(Number(v.lon))) {
+    const byNameKraj = idx.byNameKraj || {};
+    const hit = kc ? byNameKraj[`${nn}|${kc}`] : null;
+    const hitArr = Array.isArray(hit) ? hit : hit ? [hit] : null;
+    if (kc && hitArr && hitArr.length) {
+      const coords = pickClosestFromOptions(hitArr, BOR_BIAS);
+      if (coords) {
         return {
-          coords: { lat: Number(v.lat), lon: Number(v.lon) },
-          candidates: 1,
-          options: null,
+          coords,
+          candidates: hitArr.length,
+          options: hitArr,
           usedKraj: kc
         };
       }
     }
 
-    const options = idx.byName?.[nn];
+    let options = idx.byName?.[nn] || null;
+
+    // Fuzzy fallback for multi-word names (match all tokens in any order).
+    if ((!options || !options.length) && nn.includes(' ') && idx.byName) {
+      const tokens = nn.split(' ').map((t) => t.trim()).filter((t) => t.length >= 2);
+      if (tokens.length >= 2) {
+        const fuzzy = [];
+        const keys = Object.keys(idx.byName);
+        for (const k of keys) {
+          let ok = true;
+          for (const t of tokens) {
+            if (!k.includes(t)) {
+              ok = false;
+              break;
+            }
+          }
+          if (!ok) continue;
+          const arr = idx.byName[k] || [];
+          for (const it of arr) {
+            fuzzy.push(it);
+            if (fuzzy.length >= 80) break;
+          }
+          if (fuzzy.length >= 80) break;
+        }
+        if (fuzzy.length) options = fuzzy;
+      }
+    }
+
     const coords = pickClosestFromOptions(options, BOR_BIAS);
     return {
       coords,
@@ -322,37 +382,34 @@
 
     const items = [];
     const seen = new Set();
-    const byNameKraj = idx.byNameKraj || {};
-    for (const key of Object.keys(byNameKraj)) {
-      const sep = key.lastIndexOf('|');
-      if (sep < 0) continue;
-      const kraj = key.slice(sep + 1);
-      const v = byNameKraj[key];
-      const name = String(v?.n || '').trim();
-      if (!name) continue;
-      const krajName = CZ_REGION_NAME_BY_CODE[kraj] || '';
-      const okresName = String(v?.on || '').trim();
-      const label = okresName ? `${name} (okres ${okresName})` : krajName ? `${name}, ${krajName}` : name;
-      const fill = krajName ? `${name}, ${krajName}` : name;
-      if (seen.has(label)) continue;
-      seen.add(label);
-      items.push({ label, fill, nameKey: normalizeLookupKey(name), kraj, name });
-    }
-
-    // Fallback: if byNameKraj missing, build from byName (best-effort).
-    if (!items.length && idx.byName) {
+    if (idx.byName) {
       for (const nn of Object.keys(idx.byName)) {
         const opts = idx.byName[nn] || [];
         for (const opt of opts) {
           const name = String(opt?.n || '').trim();
+          if (!name) continue;
+
+          const t = String(opt?.t || '').trim();
+          const parent = String(opt?.p || '').trim();
           const kraj = String(opt?.k || '').trim();
           const krajName = CZ_REGION_NAME_BY_CODE[kraj] || '';
           const okresName = String(opt?.on || '').trim();
-          const label = okresName ? `${name} (okres ${okresName})` : krajName ? `${name}, ${krajName}` : name;
+          const key = String(opt?.key || '').trim();
+
+          let label = name;
+          if (t === 'zsj' && parent) {
+            label = `${name} (v obci ${parent}${okresName ? `, okres ${okresName}` : ''})`;
+          } else if (okresName) {
+            label = `${name} (okres ${okresName})`;
+          } else if (krajName) {
+            label = `${name}, ${krajName}`;
+          }
+
           const fill = krajName ? `${name}, ${krajName}` : name;
-          if (seen.has(label)) continue;
-          seen.add(label);
-          items.push({ label, fill, nameKey: normalizeLookupKey(name), kraj, name });
+          const dedupeKey = `${label}|${kraj}`;
+          if (seen.has(dedupeKey)) continue;
+          seen.add(dedupeKey);
+          items.push({ label, fill, key, nameKey: normalizeLookupKey(name), kraj, name });
         }
       }
     }
@@ -429,6 +486,7 @@
           const picked = items[idx];
           if (!picked) return;
           originEl.value = picked.fill || picked.name || picked.label;
+          if (picked.key) originEl.dataset.originPickKey = picked.key;
           hide();
           try {
             onPick?.(picked);
@@ -445,6 +503,15 @@
       const raw = String(originEl.value || '').trim();
       const q = stripOriginDecorations(raw.split(',')[0].trim());
       const key = normalizeLookupKey(q);
+
+      const tokens = key.split(' ').map((t) => t.trim()).filter(Boolean);
+      const tokenMatch = (target) => {
+        if (!tokens.length) return false;
+        for (const t of tokens) {
+          if (!target.includes(t)) return false;
+        }
+        return true;
+      };
 
       if (!key || key.length < 2) {
         hide();
@@ -465,7 +532,7 @@
         if (!it || !it.nameKey) continue;
         const target = it.nameKey;
         if (target.startsWith(key)) starts.push(it);
-        else if (target.includes(key)) contains.push(it);
+        else if (target.includes(key) || tokenMatch(target)) contains.push(it);
       }
 
       const rank = (arr) => {
@@ -501,6 +568,11 @@
     }, 80);
 
     originEl.addEventListener('input', () => {
+      try {
+        delete originEl.dataset.originPickKey;
+      } catch {
+        // ignore
+      }
       update();
     });
     originEl.addEventListener('blur', () => {
@@ -1188,6 +1260,7 @@
       userLoc: null,
       originText: '',
       originResolved: '',
+      originResolvedKey: '',
       activeLimitKm: null,
       prevLimitKm: null,
       distanceCandidates: null,
@@ -1396,6 +1469,7 @@
 
     const resolveOriginIfNeeded = async () => {
       const val = String(originEl?.value || '').trim();
+      const pickedKey = String(originEl?.dataset?.originPickKey || '').trim();
       const { statusEl } = getInputs(tag);
       const limitNow = parseIntOrNull(limitEl?.value);
       if (!val) {
@@ -1403,15 +1477,31 @@
       }
 
       // If already resolved for the same text, don't re-geocode.
-      if (state.userLoc && state.originResolved === val) return true;
+      if (state.userLoc && state.originResolved === val && state.originResolvedKey === pickedKey)
+        return true;
 
       try {
-        // For municipality names, prefer offline lookup (instant).
+        // If the user picked from suggestions, resolve via stable key (instant, no ambiguity).
+        let coords = null;
+        let detail = null;
+
+        if (pickedKey) {
+          const idx = await ensureObceIndexLoaded();
+          const hit = idx?.byKey?.[pickedKey];
+          if (hit && Number.isFinite(Number(hit.lat)) && Number.isFinite(Number(hit.lon))) {
+            coords = { lat: Number(hit.lat), lon: Number(hit.lon) };
+          }
+        }
+
+        // Otherwise try offline name lookup; fall back to online geocoding if needed.
         const parsed = parseOriginInputToObecAndKraj(val);
         const selectedRegion = normalizeRegionValue(regionSel ? regionSel.value : '');
         const krajHint = parsed.kraj || selectedRegion;
-        const detail = await lookupObecCoordsDetailed(parsed.obec || val, krajHint);
-        const coords = detail.coords || (await geocodeOnce(val + ', Czechia'));
+        if (!coords) {
+          detail = await lookupObecCoordsDetailed(parsed.obec || val, krajHint);
+          coords = detail.coords;
+        }
+        if (!coords) coords = await geocodeOnce(val + ', Czechia');
         if (!coords) {
           if (statusEl) statusEl.textContent = 'Nepodařilo se najít polohu pro: ' + val;
           return false;
@@ -1453,6 +1543,7 @@
         state.userLoc = coords;
         state.originText = val;
         state.originResolved = val;
+        state.originResolvedKey = pickedKey;
         state.activeLimitKm = limitNow;
         state.distanceComputeBatches = 0;
         state.remainingGeoQueries = 0;
@@ -1570,12 +1661,18 @@
       .querySelector(`button[data-role=clear][data-target="${tag}"]`)
       ?.addEventListener('click', () => {
         if (originEl) originEl.value = '';
+        try {
+          if (originEl) delete originEl.dataset.originPickKey;
+        } catch {
+          // ignore
+        }
         if (minwEl) minwEl.value = '';
         if (limitEl) limitEl.value = '';
         state.distances.clear();
         state.userLoc = null;
         state.originText = '';
         state.originResolved = '';
+        state.originResolvedKey = '';
         state.activeLimitKm = null;
         state.prevLimitKm = null;
         state.distanceCandidates = null;

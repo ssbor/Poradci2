@@ -150,7 +150,12 @@ async function extractNeeded(zipPath, outDir) {
       '1/OKRESY_P.shx',
       '1/OKRESY_P.dbf',
       '1/OKRESY_P.prj',
-      '1/OKRESY_P.cpg'
+      '1/OKRESY_P.cpg',
+      '1/ZSJ_P.shp',
+      '1/ZSJ_P.shx',
+      '1/ZSJ_P.dbf',
+      '1/ZSJ_P.prj',
+      '1/ZSJ_P.cpg'
     ];
 
     for (const entry of needed) {
@@ -202,6 +207,9 @@ async function main() {
   const okresShpPath = path.join(EXTRACT_DIR, 'OKRESY_P.shp');
   const okresDbfPath = path.join(EXTRACT_DIR, 'OKRESY_P.dbf');
 
+  const zsjShpPath = path.join(EXTRACT_DIR, 'ZSJ_P.shp');
+  const zsjDbfPath = path.join(EXTRACT_DIR, 'ZSJ_P.dbf');
+
   const okresByCode = {};
   if (exists(okresShpPath) && exists(okresDbfPath)) {
     console.log('[obce] reading OKRESY_P for okres names…');
@@ -242,6 +250,7 @@ async function main() {
   let okresField = null;
 
   const items = [];
+  const obecNameByKod = {};
   let readCount = 0;
 
   while (true) {
@@ -263,6 +272,9 @@ async function main() {
     const name = String(props?.[nameField] || '').trim();
     if (!name) continue;
 
+    const obecKod = String(props?.KOD || props?.Kod || '').trim();
+    if (obecKod) obecNameByKod[obecKod] = name;
+
     const centroid = centroidOfGeometry(value?.geometry);
     if (!centroid) continue;
 
@@ -274,6 +286,8 @@ async function main() {
     const okresName = okresCode ? String(okresByCode[okresCode] || '').trim() : '';
 
     items.push({
+      t: 'obec',
+      id: obecKod,
       n: name,
       nn: normalizeName(name),
       k: kraj,
@@ -284,22 +298,87 @@ async function main() {
     });
   }
 
+  if (exists(zsjShpPath) && exists(zsjDbfPath)) {
+    console.log('[obce] reading ZSJ_P for smaller localities…');
+    const zsjEncoding = detectDbfEncoding(EXTRACT_DIR, 'ZSJ_P');
+    console.log(`[obce] ZSJ_P DBF encoding: ${zsjEncoding}`);
+    const zsrc = await shapefile.open(zsjShpPath, zsjDbfPath, { encoding: zsjEncoding });
+
+    let zsjNameField = null;
+    let zsjKrajField = null;
+    let zsjOkresField = null;
+    let zsjKodField = null;
+    let zsjObecKodField = null;
+
+    let zsjCount = 0;
+    while (true) {
+      const { done, value } = await zsrc.read();
+      if (done) break;
+
+      const props = value?.properties || {};
+      if (!zsjNameField) {
+        zsjNameField = pickField(props, ['NAZEV', 'NAZEV_ZSJ', 'NAZ_ZSJ']);
+        zsjKrajField = pickField(props, ['NUTS3_KOD', 'NUTS3', 'NUTS3_CODE']);
+        zsjOkresField = pickField(props, ['OKRES_KOD', 'KOD_OKRES', 'KOD_OKRESU']);
+        zsjKodField = pickField(props, ['KOD', 'ZSJ_KOD', 'KOD_ZSJ']);
+        zsjObecKodField = pickField(props, ['OBEC_KOD', 'KOD_OBEC', 'ZUJ_KOD']);
+        if (!zsjNameField) {
+          throw new Error('[obce] cannot detect ZSJ name field in ZSJ_P.dbf');
+        }
+      }
+
+      const name = String(props?.[zsjNameField] || '').trim();
+      if (!name) continue;
+
+      const centroid = centroidOfGeometry(value?.geometry);
+      if (!centroid) continue;
+
+      const [lon, lat] = toWgs84.forward([centroid.x, centroid.y]);
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+      const kod = zsjKodField ? String(props?.[zsjKodField] || '').trim() : '';
+      const obecKod = zsjObecKodField ? String(props?.[zsjObecKodField] || '').trim() : '';
+      const parentObec = obecKod ? String(obecNameByKod[obecKod] || '').trim() : '';
+      const kraj = zsjKrajField ? String(props?.[zsjKrajField] || '').trim() : '';
+      const okresCode = zsjOkresField ? String(props?.[zsjOkresField] || '').trim() : '';
+      const okresName = okresCode ? String(okresByCode[okresCode] || '').trim() : '';
+
+      items.push({
+        t: 'zsj',
+        id: kod,
+        p: parentObec,
+        n: name,
+        nn: normalizeName(name),
+        k: kraj,
+        o: okresCode,
+        on: okresName,
+        lat: Number(lat),
+        lon: Number(lon)
+      });
+      zsjCount++;
+    }
+    console.log(`[obce] loaded ZSJ centroids: ${zsjCount}`);
+  } else {
+    console.log('[obce] ZSJ_P layer not found; only municipalities will be available');
+  }
+
   // Build compact indices
   const byName = {};
   const byNameKraj = {};
+  const byKey = {};
 
   for (const it of items) {
     if (!byName[it.nn]) byName[it.nn] = [];
-    byName[it.nn].push({ n: it.n, k: it.k, o: it.o, on: it.on, lat: it.lat, lon: it.lon });
+    const key = `${it.t || 'obec'}:${it.id || it.nn}`;
+    const entry = { key, t: it.t || 'obec', id: it.id || '', p: it.p || '', n: it.n, k: it.k, o: it.o, on: it.on, lat: it.lat, lon: it.lon };
+    byName[it.nn].push(entry);
+
+    byKey[key] = { lat: it.lat, lon: it.lon, n: it.n, k: it.k, o: it.o, on: it.on, t: it.t || 'obec', id: it.id || '', p: it.p || '' };
 
     if (it.k) {
-      byNameKraj[`${it.nn}|${it.k}`] = {
-        lat: it.lat,
-        lon: it.lon,
-        n: it.n,
-        o: it.o,
-        on: it.on
-      };
+      const k = `${it.nn}|${it.k}`;
+      if (!byNameKraj[k]) byNameKraj[k] = [];
+      byNameKraj[k].push(entry);
     }
   }
 
@@ -311,7 +390,8 @@ async function main() {
     },
     count: items.length,
     byName,
-    byNameKraj
+    byNameKraj,
+    byKey
   };
 
   await fsp.writeFile(OUT_FILE, JSON.stringify(out));
