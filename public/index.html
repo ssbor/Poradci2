@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Poradci – SŠ Bor</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="style.css?v=20260212-10">
+<link rel="stylesheet" href="style.css?v=20260213-1">
 <link rel="stylesheet" href="chatbot.css">
 </head>
 <body>
@@ -104,15 +104,38 @@
   </section>
 
   <section class="section" id="vzdelani">
-    <h2 class="section-title">Vzdělání</h2>
-    <p class="section-sub">Možnosti po vyučení nebo maturitě (zatím lokálně).</p>
+    <div class="grid" style="margin-bottom: .25rem">
+      <div class="col-6"><h2 class="section-title" style="margin-bottom: 0">Vzdělání</h2></div>
+      <div class="col-6"><h2 class="section-title" style="margin-bottom: 0">Kurzy</h2></div>
+    </div>
     <div class="grid" style="margin-top: 1rem">
-      <div class="card col-12">
-        <h3>Vzdělání po škole</h3>
-        <p class="muted">Rozcestník: nástavba (maturita), zkrácené studium, VOŠ/VŠ a certifikace.</p>
-        <div style="margin-top:.9rem; display:flex; gap:.6rem; flex-wrap:wrap">
-          <a class="btn btn--primary" href="vzdelani.html">Otevřít vzdělání</a>
-          <a class="btn btn--ghost" href="kurzy.html">Kurzy a rekvalifikace</a>
+      <div class="card card--feature card--edu col-6">
+        <div class="card-title-row">
+          <h3>Vzdělání po škole</h3>
+        </div>
+        <p class="muted">Nástavba (maturita), zkrácené studium, VOŠ/VŠ a zkoušky.</p>
+        <ul class="meta-list">
+          <li>Nástavbové studium</li>
+          <li>Zkrácené studium / změna oboru</li>
+          <li>VOŠ a VŠ</li>
+        </ul>
+        <div style="margin-top: .9rem">
+          <a class="btn btn--edu" href="vzdelani.html">Otevřít vzdělání</a>
+        </div>
+      </div>
+
+      <div class="card card--feature card--courses col-6">
+        <div class="card-title-row">
+          <h3>Kurzy a rekvalifikace</h3>
+        </div>
+        <p class="muted">Kurzy, workshopy a materiály budou na vlastní stránce.</p>
+        <ul class="meta-list">
+          <li>Kurzy pro uchazeče / žáky</li>
+          <li>Termíny, přihlášky, kapacity</li>
+          <li>Materiály ke stažení</li>
+        </ul>
+        <div style="margin-top: .9rem">
+          <a class="btn btn--courses" href="kurzy.html">Přejít na kurzy</a>
         </div>
       </div>
     </div>
@@ -138,9 +161,6 @@
           <li>Termíny, přihlášky, kapacity</li>
           <li>Materiály ke stažení</li>
         </ul>
-        <div style="margin-top:.9rem">
-          <a class="btn" href="kurzy.html">Přejít na kurzy</a>
-        </div>
       </div>
     </div>
   </section>

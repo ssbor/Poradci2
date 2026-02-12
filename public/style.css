@@ -229,6 +229,31 @@ select.select[data-role="skoly-page-size"]{
 .card h3{ margin: 0 0 .5rem 0; }
 .card p{ margin: .35rem 0 0 0; color: var(--muted); }
 
+.card--feature{ position: relative; overflow:hidden; }
+.card--feature::before{
+  content:"";
+  position:absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg, rgba(19,102,214,1) 0%, rgba(90,158,246,1) 100%);
+}
+.card--edu::before{ background: linear-gradient(90deg, rgba(79,70,229,1) 0%, rgba(139,92,246,1) 100%); }
+.card--courses::before{ background: linear-gradient(90deg, #f97316 0%, #fb923c 100%); }
+
+.btn--edu{
+  background: linear-gradient(120deg, rgba(79,70,229,1) 0%, rgba(139,92,246,1) 100%);
+  border-color: rgba(79,70,229,1);
+  color: #fff;
+}
+.btn--edu:hover{ background: linear-gradient(120deg, rgba(67,56,202,1) 0%, rgba(124,58,237,1) 100%); }
+
+.btn--courses{
+  background: linear-gradient(120deg, #f97316 0%, #fb923c 100%);
+  border-color: #f97316;
+  color: #fff;
+}
+.btn--courses:hover{ background: linear-gradient(120deg, #ea580c 0%, #f97316 100%); }
+
 .card--obor{ position: relative; overflow:hidden; }
 .card--obor::before{
   content:"";
