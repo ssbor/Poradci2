@@ -193,6 +193,11 @@
   let OBCE_INDEX = null;
   let OBCE_INDEX_LOADING = null;
 
+  // Lightweight autocomplete list (no coords) to avoid downloading the full centroid index
+  // just to show suggestions while typing.
+  let OBCE_SUGGEST = null;
+  let OBCE_SUGGEST_LOADING = null;
+
   function normalizePlaceName(s) {
     return normalizeLookupKey(s);
   }
@@ -375,47 +380,122 @@
       .replace(/>/g, '&gt;');
   }
 
-  async function ensureObceSuggestItems() {
-    const idx = await ensureObceIndexLoaded();
-    if (!idx) return null;
-    if (Array.isArray(idx.__suggestItems)) return idx.__suggestItems;
+  async function ensureObceSuggestLoaded() {
+    if (OBCE_SUGGEST) return OBCE_SUGGEST;
+    if (OBCE_SUGGEST_LOADING) return OBCE_SUGGEST_LOADING;
 
-    const items = [];
-    const seen = new Set();
-    if (idx.byName) {
-      for (const nn of Object.keys(idx.byName)) {
-        const opts = idx.byName[nn] || [];
-        for (const opt of opts) {
-          const name = String(opt?.n || '').trim();
-          if (!name) continue;
+    OBCE_SUGGEST_LOADING = (async () => {
+      // Preferred: lightweight suggestions file
+      try {
+        const data = await fetchJSON('data/obce_suggest.json');
+        const arr = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : null;
+        if (arr && arr.length) {
+          const items = [];
+          const index1 = Object.create(null);
+          const index2 = Object.create(null);
 
-          const t = String(opt?.t || '').trim();
-          const parent = String(opt?.p || '').trim();
-          const kraj = String(opt?.k || '').trim();
-          const krajName = CZ_REGION_NAME_BY_CODE[kraj] || '';
-          const okresName = String(opt?.on || '').trim();
-          const key = String(opt?.key || '').trim();
+          for (const raw of arr) {
+            const name = String(raw?.name || raw?.n || '').trim();
+            if (!name) continue;
+            const kraj = String(raw?.kraj || raw?.k || '').trim();
+            const okresName = String(raw?.okresName || raw?.on || '').trim();
+            const t = String(raw?.t || '').trim();
+            const parent = String(raw?.parent || raw?.p || '').trim();
+            const key = String(raw?.key || '').trim();
 
-          let label = name;
-          if (t === 'zsj' && parent) {
-            label = `${name} (v obci ${parent}${okresName ? `, okres ${okresName}` : ''})`;
-          } else if (okresName) {
-            label = `${name} (okres ${okresName})`;
-          } else if (krajName) {
-            label = `${name}, ${krajName}`;
+            const krajName = CZ_REGION_NAME_BY_CODE[kraj] || '';
+            let label = String(raw?.label || '').trim();
+            if (!label) {
+              label = name;
+              if (t === 'zsj' && parent) {
+                label = `${name} (v obci ${parent}${okresName ? `, okres ${okresName}` : ''})`;
+              } else if (okresName) {
+                label = `${name} (okres ${okresName})`;
+              } else if (krajName) {
+                label = `${name}, ${krajName}`;
+              }
+            }
+
+            const fill = String(raw?.fill || '').trim() || (krajName ? `${name}, ${krajName}` : name);
+            const nameKey = String(raw?.nameKey || '').trim() || normalizeLookupKey(name);
+            const item = { label, fill, key, nameKey, kraj, name };
+            items.push(item);
+
+            const p1 = nameKey.slice(0, 1);
+            const p2 = nameKey.slice(0, 2);
+            if (p1) (index1[p1] || (index1[p1] = [])).push(item);
+            if (p2.length === 2) (index2[p2] || (index2[p2] = [])).push(item);
           }
 
-          const fill = krajName ? `${name}, ${krajName}` : name;
-          const dedupeKey = `${label}|${kraj}`;
-          if (seen.has(dedupeKey)) continue;
-          seen.add(dedupeKey);
-          items.push({ label, fill, key, nameKey: normalizeLookupKey(name), kraj, name });
+          OBCE_SUGGEST = { items, index1, index2 };
+          return OBCE_SUGGEST;
         }
+      } catch {
+        // ignore
       }
-    }
 
-    idx.__suggestItems = items;
-    return items;
+      // Fallback: build from centroid index (older deployments).
+      try {
+        const idx = await ensureObceIndexLoaded();
+        if (!idx) return null;
+
+        const items = [];
+        const index1 = Object.create(null);
+        const index2 = Object.create(null);
+        const seen = new Set();
+        let built = 0;
+
+        if (idx.byName) {
+          for (const nn of Object.keys(idx.byName)) {
+            const opts = idx.byName[nn] || [];
+            for (const opt of opts) {
+              const name = String(opt?.n || '').trim();
+              if (!name) continue;
+
+              const t = String(opt?.t || '').trim();
+              const parent = String(opt?.p || '').trim();
+              const kraj = String(opt?.k || '').trim();
+              const krajName = CZ_REGION_NAME_BY_CODE[kraj] || '';
+              const okresName = String(opt?.on || '').trim();
+              const key = String(opt?.key || '').trim();
+
+              let label = name;
+              if (t === 'zsj' && parent) {
+                label = `${name} (v obci ${parent}${okresName ? `, okres ${okresName}` : ''})`;
+              } else if (okresName) {
+                label = `${name} (okres ${okresName})`;
+              } else if (krajName) {
+                label = `${name}, ${krajName}`;
+              }
+
+              const fill = krajName ? `${name}, ${krajName}` : name;
+              const dedupeKey = `${label}|${kraj}`;
+              if (seen.has(dedupeKey)) continue;
+              seen.add(dedupeKey);
+
+              const nameKey = normalizeLookupKey(name);
+              const item = { label, fill, key, nameKey, kraj, name };
+              items.push(item);
+
+              const p1 = nameKey.slice(0, 1);
+              const p2 = nameKey.slice(0, 2);
+              if (p1) (index1[p1] || (index1[p1] = [])).push(item);
+              if (p2.length === 2) (index2[p2] || (index2[p2] = [])).push(item);
+
+              built++;
+              if (built % 2500 === 0) await sleep(0);
+            }
+          }
+        }
+
+        OBCE_SUGGEST = { items, index1, index2 };
+        return OBCE_SUGGEST;
+      } catch {
+        return null;
+      }
+    })();
+
+    return OBCE_SUGGEST_LOADING;
   }
 
   function attachOriginAutocomplete(tag, state, originEl, regionSel, onPick) {
@@ -464,8 +544,12 @@
 
       box.innerHTML = items
         .map(
-          (it, i) =>
-            `<button type="button" data-i="${i}" style="display:block;width:100%;text-align:left;padding:8px 10px;border:0;background:transparent;border-radius:8px;cursor:pointer">${escapeHtmlAttr(it.label)}</button>`
+          (it, i) => {
+            if (it?.disabled) {
+              return `<div data-i="${i}" style="display:block;width:100%;text-align:left;padding:8px 10px;border-radius:8px;color:rgba(0,0,0,.65)">${escapeHtmlAttr(it.label)}</div>`;
+            }
+            return `<button type="button" data-i="${i}" style="display:block;width:100%;text-align:left;padding:8px 10px;border:0;background:transparent;border-radius:8px;cursor:pointer">${escapeHtmlAttr(it.label)}</button>`;
+          }
         )
         .join('');
 
@@ -499,7 +583,16 @@
       show();
     };
 
+    const renderLoading = (label) => {
+      renderItems([{ label: label || 'Načítám…', disabled: true }]);
+    };
+
+    // Cache a few recent lookups so backspacing/retargeting is instant.
+    const resultCache = new Map();
+    let updateSeq = 0;
+
     const update = debounce(async () => {
+      const mySeq = ++updateSeq;
       const raw = String(originEl.value || '').trim();
       const q = stripOriginDecorations(raw.split(',')[0].trim());
       const key = normalizeLookupKey(q);
@@ -518,21 +611,52 @@
         return;
       }
 
-      const all = await ensureObceSuggestItems();
-      if (!all) {
+      const selectedRegion = normalizeRegionValue(regionSel ? regionSel.value : '');
+      const cacheKey = `${selectedRegion}|${key}`;
+      if (resultCache.has(cacheKey)) {
+        const cached = resultCache.get(cacheKey);
+        if (Array.isArray(cached) && cached.length) renderItems(cached);
+        else hide();
+        return;
+      }
+
+      renderLoading('Načítám seznam obcí…');
+      const suggest = await ensureObceSuggestLoaded();
+      if (mySeq !== updateSeq) return;
+      const all = suggest?.items;
+      if (!all || !all.length) {
         hide();
         return;
       }
 
-      const selectedRegion = normalizeRegionValue(regionSel ? regionSel.value : '');
+      const index2 = suggest?.index2 || null;
+      const index1 = suggest?.index1 || null;
+      const p2 = key.slice(0, 2);
+      const p1 = key.slice(0, 1);
+      const base =
+        (p2.length === 2 && index2 && Array.isArray(index2[p2]) && index2[p2]) ||
+        (p1 && index1 && Array.isArray(index1[p1]) && index1[p1]) ||
+        all;
 
       const starts = [];
       const contains = [];
-      for (const it of all) {
+
+      for (const it of base) {
         if (!it || !it.nameKey) continue;
         const target = it.nameKey;
         if (target.startsWith(key)) starts.push(it);
         else if (target.includes(key) || tokenMatch(target)) contains.push(it);
+      }
+
+      // If we're using a prefix subset and still have nothing, do a limited fallback scan.
+      if (base !== all && starts.length + contains.length < 12) {
+        for (const it of all) {
+          if (!it || !it.nameKey) continue;
+          const target = it.nameKey;
+          if (target.startsWith(key)) continue;
+          if (target.includes(key) || tokenMatch(target)) contains.push(it);
+          if (contains.length >= 40) break;
+        }
       }
 
       const rank = (arr) => {
@@ -547,6 +671,8 @@
 
       const out = rank(starts).concat(rank(contains)).slice(0, 12);
       if (out.length) {
+        if (resultCache.size > 80) resultCache.clear();
+        resultCache.set(cacheKey, out);
         renderItems(out);
         return;
       }
@@ -554,14 +680,17 @@
       // If nothing matches offline, offer online search (Nominatim fallback).
       // This helps for places outside the municipality list.
       if (q && q.length >= 2) {
-        renderItems([
+        const out2 = [
           {
             label: `Hledat online: ${q}`,
             fill: q,
             nameKey: key,
             kraj: ''
           }
-        ]);
+        ];
+        if (resultCache.size > 80) resultCache.clear();
+        resultCache.set(cacheKey, out2);
+        renderItems(out2);
       } else {
         hide();
       }
@@ -1246,6 +1375,22 @@
     const enableFilters = !!opts.enableFilters;
     if (enableFilters) ensureFilterUI(tag, opts);
     ensureAllRegionsInSelect(tag);
+
+    // Preload municipality index in the background so the first autocomplete use is instant.
+    const scheduleIdle = (fn) => {
+      try {
+        if (typeof requestIdleCallback === 'function') {
+          requestIdleCallback(() => fn(), { timeout: 1200 });
+        } else {
+          setTimeout(() => fn(), 300);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    scheduleIdle(() => {
+      ensureObceSuggestLoaded().catch(() => {});
+    });
 
     const variantSel =
       document.querySelector(`select[data-role=variant][data-target="${tag}"]`) ||
