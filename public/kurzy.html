@@ -2,7 +2,7 @@
 <html lang="cs">
 <head>
   <meta charset="utf-8">
-  <title>Kurzy – SŠ Bor (poradci)</title>
+  <title>Rekvalifikační kurzy – SŠ Bor (poradci)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="style.css?v=20260213-1">
   <link rel="stylesheet" href="chatbot.css">
@@ -11,10 +11,10 @@
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand" href="index.html" aria-label="Domů">
-        <div class="brand-mark">SŠ</div>
+        <div class="brand-mark" style="background: linear-gradient(135deg, #f97316 0%, #fb923c 100%);">SŠ</div>
         <div>
           <p class="brand-title">Střední škola Bor</p>
-          <p class="brand-sub">Kariérové poradenství</p>
+          <p class="brand-sub">Kariérové poradenství · Rekvalifikace</p>
         </div>
       </a>
       <nav class="nav" aria-label="Hlavní navigace">
@@ -29,53 +29,174 @@
 
   <main class="container">
     <section class="section">
-      <div class="hero" style="background: linear-gradient(120deg, rgba(249,115,22,.95) 0%, rgba(251,146,60,.95) 100%);">
+      <div class="hero" style="background: linear-gradient(120deg, rgba(249,115,22,.96) 0%, rgba(251,146,60,.96) 100%);">
         <div class="hero-grid">
           <div>
-            <h1>Kurzy a workshopy (připravujeme)</h1>
-            <p>Tahle stránka je připravená pro budoucí rozšíření. Můžeme sem přidat přihlášky, termíny, kapacity a materiály ke stažení.</p>
+            <h1>Rekvalifikační kurzy (oficiální vyhledávač ÚP)</h1>
+            <p>Rekvalifikace se nejlépe hledají přímo ve vyhledávači Úřadu práce. Na našem webu proto najdeš hlavně jednoduchý postup, tipy a odkazy – výsledky se zobrazují na oficiálních stránkách.</p>
             <ul class="checklist">
-              <li>Kurzy pro uchazeče (příprava na přijímačky, dny otevřených dveří)</li>
-              <li>Kurzy pro žáky (CV, pohovor, praxe, podnikání)</li>
-              <li>Workshopy s firmami a exkurze</li>
+              <li>Vybereš si cíl (co se chceš naučit)</li>
+              <li>Otevřeš oficiální vyhledávač ÚP a vyfiltruješ nabídku</li>
+              <li>Najdeš si kontakt a ověříš podmínky</li>
             </ul>
             <div class="hero-actions">
               <a class="btn btn--orange-dark" href="index.html#vzdelani">Zpět na kurzy</a>
             </div>
           </div>
           <div class="card" style="border-color: rgba(255,255,255,.25); background: rgba(255,255,255,.14); color: #fff;">
-            <h3 style="margin-top:0; color:#fff;">Co sem doplnit</h3>
-            <ul class="checklist">
-              <li>Název, popis, cílovka</li>
-              <li>Termín, délka, místo</li>
-              <li>Kapacita, cena (pokud je)</li>
-              <li>Tlačítko „Přihlásit se“</li>
-            </ul>
+            <h3 style="margin-top:0; color:#fff;">Proč to nejde přímo?</h3>
+            <p style="margin: .35rem 0 0 0; color: rgba(255,255,255,.92)">Na statickém webu (GitHub Pages) nemáme server, který by dělal „proxy“. A prohlížeč nám zakáže číst výsledky z cizí domény (ochrana CORS).</p>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="section">
-      <div class="grid">
-        <div class="card col-6">
-          <h3>Ukázková struktura kurzů</h3>
-          <p class="muted">Až budete chtít, napojíme to na JSON nebo Google Sheet.</p>
-          <ul class="meta-list">
-            <li>Připravované termíny</li>
-            <li>Archiv proběhlých akcí</li>
-            <li>Filtry (pro žáky / pro uchazeče / pro veřejnost)</li>
+    <section class="section" id="oficialni">
+      <div class="card card--cta card--cta-blue">
+        <div class="grid" style="align-items: center; gap: 1rem;">
+          <div class="col-6">
+            <div class="card-title-row">
+              <h2 class="section-title" style="margin:0;">Oficiální vyhledávání</h2>
+              <span class="count-pill">Úřad práce</span>
+            </div>
+
+            <p class="section-sub" style="margin-top:.35rem;">Aktuální nabídku rekvalifikací najdeš ve vyhledávači ÚP. Odkaz se otevře v novém okně.</p>
+
+            <div style="margin-top:.9rem; display:flex; gap:.6rem; flex-wrap:wrap; align-items:center">
+              <a class="btn btn--primary-dark" href="https://www.uradprace.cz/vyhledani-rekvalifikacniho-kurzu" target="_blank" rel="noopener">Otevřít vyhledávač rekvalifikací (ÚP)</a>
+            </div>
+          </div>
+
+          <div class="col-6">
+            <div class="card card--soft" style="margin:0; position: relative; overflow:hidden;">
+              <div aria-hidden="true" style="position:absolute; right:-36px; top:-36px; width: 190px; height: 190px; opacity: .14; transform: rotate(10deg); pointer-events:none;">
+                <svg viewBox="0 0 120 120" width="190" height="190" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M52 94c22.091 0 40-17.909 40-40S74.091 14 52 14 12 31.909 12 54s17.909 40 40 40Z" stroke="black" stroke-width="10"/>
+                  <path d="m86 86 22 22" stroke="black" stroke-width="12" stroke-linecap="round"/>
+                  <path d="M32 52h40" stroke="black" stroke-width="10" stroke-linecap="round" opacity=".9"/>
+                  <path d="M52 32v40" stroke="black" stroke-width="10" stroke-linecap="round" opacity=".9"/>
+                </svg>
+              </div>
+
+              <h3 style="margin-top:0;">Rychlá kontrola v detailu kurzu</h3>
+              <ul class="checklist" style="margin-top:.65rem;">
+                <li>Místo konání / dojezd</li>
+                <li>Forma výuky (prezenčně/online)</li>
+                <li>Termín a délka</li>
+                <li>Požadavky a vstupní úroveň</li>
+                <li>Certifikát/zkouška + kontakt</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="podminky">
+      <div class="grid" style="margin-top: 1rem">
+        <div class="card card--stripe col-6">
+          <div class="card-title-row">
+            <h2 class="section-title" style="margin:0;">Podmínky (obecně)</h2>
+            <span class="count-pill">Co se typicky řeší</span>
+          </div>
+          <ul class="meta-list" style="margin-top:.75rem;">
+            <li>Věk a základní údaje (záleží na typu kurzu a pravidlech programu).</li>
+            <li>Předchozí vzdělání / praxe (některé kurzy mají vstupní úroveň).</li>
+            <li>Zdravotní způsobilost (u řemesel, práce ve výškách, řidičských oprávnění apod.).</li>
+            <li>Časové možnosti a docházka (kurzy mívají povinnou účast a závěrečnou zkoušku).</li>
+            <li>Motivace a cíl: proč právě tento kurz a co po něm chceš dělat.</li>
           </ul>
         </div>
-        <div class="card col-6">
-          <h3>Dokumenty a materiály</h3>
-          <p class="muted">Může to být i jednoduchý seznam odkazů s odrážkami.</p>
-          <ul class="meta-list">
-            <li>PDF pozvánky</li>
-            <li>Prezentace</li>
-            <li>Checklist „Jak se připravit“</li>
+
+        <div class="card card--stripe card--stripe-green col-6">
+          <div class="card-title-row">
+            <h2 class="section-title" style="margin:0;">Úhrada kurzu</h2>
+            <span class="count-pill">ÚP × samoplátce</span>
+          </div>
+          <ul class="meta-list" style="margin-top:.75rem;">
+            <li><strong>Přes ÚP</strong>: obvykle je potřeba domluvit se na postupu (konzultace, schválení, termín, podmínky).</li>
+            <li><strong>Samoplátce</strong>: přihlásíš se přímo u poskytovatele a řešíš cenu/platební podmínky s ním.</li>
+            <li>U obou variant si ověř: cenu, délku, formu výuky, co je v ceně (zkouška, materiály), a co získáš za certifikát.</li>
+          </ul>
+          <div class="muted" style="margin-top:.5rem;">Tip: pokud chceš úhradu přes ÚP, připrav si konkrétní kurz (název, místo, termín) a svůj cíl po kurzu.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="pripravit">
+      <div class="grid" style="margin-top: 1rem">
+        <div class="card card--stripe card--stripe-orange col-6">
+          <div class="card-title-row">
+            <h2 class="section-title" style="margin:0;">Co si připravit</h2>
+            <span class="count-pill">Doklady a info</span>
+          </div>
+          <ul class="meta-list" style="margin-top:.75rem;">
+            <li>Občanský průkaz (a případně další doklady dle situace).</li>
+            <li>Krátký popis cíle: „chci se naučit X, protože…“</li>
+            <li>Časové možnosti (kdy můžeš chodit) + doprava (jak se dostaneš na místo).</li>
+            <li>Základní informace o kurzu: název, lokalita, termín, kontakt na poskytovatele.</li>
+            <li>Pokud je požadavek: potvrzení o vzdělání, praxi nebo zdravotní způsobilosti.</li>
           </ul>
         </div>
+
+        <div class="card card--stripe card--stripe-red col-6">
+          <div class="card-title-row">
+            <h2 class="section-title" style="margin:0;">Na co si dát pozor</h2>
+            <span class="count-pill">Kvalita a realita</span>
+          </div>
+          <ul class="meta-list" style="margin-top:.75rem;">
+            <li>Kurz má jasný výstup (certifikát / zkouška) a popsaný obsah.</li>
+            <li>Je reálné ho dokončit (docházka, délka, náročnost, praxe).</li>
+            <li>Neplatíš nic „bokem“ bez smluvních podmínek a jasného dokladu.</li>
+            <li>Ověř si, co přesně je v ceně (učebnice, zkoušky, opakování).</li>
+            <li>Zvaž návaznost na práci: kde se po kurzu můžeš uplatnit (ideálně konkrétní firmy).</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="jak-na-to">
+      <div class="grid" style="margin-top: 1rem">
+        <div class="card card--stripe col-6">
+          <div class="card-title-row">
+            <h2 class="section-title" style="margin:0;">Jak na rekvalifikaci</h2>
+            <span class="count-pill">Rychlý postup</span>
+          </div>
+          <ol class="steps">
+            <li>Ujasni si cíl: co chceš umět dělat za 3–6 měsíců.</li>
+            <li>Otevři vyhledávač ÚP a zkus 2–3 různé názvy (synonyma).</li>
+            <li>Vyber lokalitu a formu výuky (prezenčně/online).</li>
+            <li>Klikni na detail kurzu a zkontroluj podmínky + kontakt.</li>
+            <li>Když si nejsi jistý/á, napiš si otázky a kontaktuj poskytovatele nebo ÚP.</li>
+          </ol>
+        </div>
+
+        <div class="card card--stripe col-6">
+          <div class="card-title-row">
+            <h2 class="section-title" style="margin:0;">Tipy pro hledání</h2>
+            <span class="count-pill">Ať to najdeš rychle</span>
+          </div>
+          <ul class="meta-list" style="margin-top:.75rem;">
+            <li>Zkus více pojmenování: „účetnictví“ × „mzdová účetní“ × „daňová evidence“.</li>
+            <li>Nehledej jen „IT“ – zkus konkrétně „testování“, „správa sítí“, „Excel“.</li>
+            <li>U řemesel zkus i konkrétní certifikace (např. svářečské zkoušky).</li>
+            <li>Když nic nenajdeš v okolí, zkus širší region nebo online variantu.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="zdroje">
+      <div class="card">
+        <div class="card-title-row">
+          <h2 class="section-title" style="margin:0;">Další oficiální zdroje</h2>
+          <span class="count-pill">Odkazy</span>
+        </div>
+
+        <ul class="meta-list" style="margin-top:.75rem;">
+          <li><a href="https://www.mpsv.cz/databaze-rekvalifikace" target="_blank" rel="noopener">Databáze rekvalifikace (MPSV)</a></li>
+          <li><a href="https://www.uradprace.cz/vyhledani-rekvalifikacniho-kurzu" target="_blank" rel="noopener">Vyhledání rekvalifikačního kurzu (ÚP)</a></li>
+        </ul>
       </div>
     </section>
 
@@ -83,9 +204,9 @@
       <div class="footer-grid">
         <div>
           <strong>SŠ Bor – poradci</strong>
-          <div class="muted">Statická ukázka struktury (kurzy budou doplněny).</div>
+          <div class="muted">Rekvalifikace: oficiální vyhledávač ÚP.</div>
         </div>
-        <div class="muted">Tip: kurzy můžeme snadno spravovat přes JSON/Sheet a automaticky vykreslit.</div>
+        <div class="muted">Do budoucna: AI poradce pro kurzy (výběr cíle, tipy, postup).</div>
       </div>
     </footer>
   </main>
