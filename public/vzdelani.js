@@ -7,23 +7,71 @@
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]+/g, '')
+      // Treat punctuation as spaces so queries don't require exact commas/spaces.
+      .replace(/[^a-z0-9]+/g, ' ')
       .replace(/\s+/g, ' ');
+  }
+
+  function normalizeProgramCode(s) {
+    return String(s || '')
+      .trim()
+      .toUpperCase()
+      .replace(/[^0-9A-Z]+/g, '');
   }
 
   function escapeRegExp(s) {
     return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
+  function prefixLenForToken(t) {
+    const s = String(t || '').trim();
+    if (!s) return 0;
+    if (s.length <= 4) return s.length;
+    // Heuristic: long enough to avoid noisy matches, short enough to catch inflections.
+    // Examples: zednik (6) -> 4, elektrik (8) -> 5, automechanik (11) -> 6
+    return Math.max(4, Math.min(6, Math.floor(s.length * 0.65)));
+  }
+
+  function prefixTokenMatch(hay, token) {
+    const t = String(token || '').trim();
+    if (!t) return true;
+
+    const prefixLen = prefixLenForToken(t);
+    if (prefixLen < 4) return false;
+    const tp = t.slice(0, prefixLen);
+
+    const words = String(hay || '').split(/[^a-z0-9]+/g).filter(Boolean);
+    // Match if any word shares a strong prefix with the token.
+    for (const w of words) {
+      if (w.length < prefixLen) continue;
+      if (w.startsWith(tp)) return true;
+    }
+    return false;
+  }
+
   function tokenInText(text, token) {
     const t = String(token || '').trim();
     if (!t) return true;
     const hay = String(text || '');
+    const B = '(^|[^a-z0-9])';
     // Prevent noisy substring matches for very short tokens (e.g. "vs").
     if (t.length <= 2) {
-      const re = new RegExp(`(^|\\s)${escapeRegExp(t)}(\\s|$)`);
+      const re = new RegExp(`${B}${escapeRegExp(t)}([^a-z0-9]|$)`);
       return re.test(hay);
     }
-    return hay.includes(t);
+
+    // For short tokens, only match at the start of a word.
+    // This avoids false positives like "bor" matching inside "odborna".
+    if (t.length <= 4) {
+      const re = new RegExp(`${B}${escapeRegExp(t)}`);
+      return re.test(hay);
+    }
+
+    // First try fast substring match (works well for most cases).
+    if (hay.includes(t)) return true;
+
+    // Fallback: handle common Czech inflections (e.g. "zednik" vs "zednicke").
+    return prefixTokenMatch(hay, t);
   }
 
   // Expand common user terms into official program-name equivalents.
@@ -50,14 +98,18 @@
       topenar: ['instalater', 'topenarstvi'],
       plynar: ['instalater', 'plynar'],
 
-      zednik: ['zednik', 'stavebni prace'],
+      zednik: ['zednik', 'zednicke prace', 'zednicke', 'stavebni prace'],
+      zednar: ['zednicke prace', 'zednicke', 'stavebni prace'],
+      omitkar: ['omitky', 'omitkarske prace', 'stavebni prace'],
+      omitky: ['omitkarske prace', 'stavebni prace'],
       stolar: ['truhlar', 'stolar'],
       truhlar: ['truhlar'],
       tesar: ['tesar'],
       pokryvac: ['pokryvac'],
       malir: ['malir', 'lakyrnik'],
       naterac: ['malir', 'lakyrnik'],
-      obkladac: ['zednik'],
+      obkladac: ['obkladac', 'obkladacske prace', 'obklady', 'zednicke prace'],
+      dlazdic: ['dlazdic', 'dlazdice', 'obklady'],
 
       svarec: ['svarec', 'zamecnik', 'strojirenstvi'],
       zamecnik: ['zamecnik', 'strojirenstvi'],
@@ -66,6 +118,11 @@
       frezar: ['obrabec kovu', 'strojirenstvi'],
       cnc: ['obrabec kovu', 'strojirenstvi'],
       mechanik: ['mechanik', 'strojirenstvi'],
+
+      elektrikář: ['elektrikar', 'elektrotechnika'],
+      zamečník: ['zamecnik', 'strojirenstvi'],
+      svářeč: ['svarec', 'strojirenstvi'],
+      zedník: ['zednik', 'zednicke prace', 'stavebni prace'],
 
       ajtak: ['informatika', 'informacni technologie'],
       itak: ['informatika', 'informacni technologie'],
@@ -303,6 +360,10 @@
     const progHtml = matches
       .slice(0, 6)
       .map((p) => {
+        const programTitle = String(p?.name || '')
+          // Dataset sometimes contains extra searchable aliases in parentheses; UI should show only the title.
+          .replace(/\s*(\([^)]*\)\s*)+$/g, '')
+          .trim();
         const codeHtml = p.code ? `<div class="program-row__meta">${escapeHtml(p.code)}</div>` : '';
         const formaChip = p.forma
           ? `<span class="tag tag--kv"><span class="tag__k">Forma</span><span class="tag__sep">·</span><span class="tag__v">${escapeHtml(
@@ -319,7 +380,7 @@
         return `
           <div class="program-row">
             <div>
-              <div><b>${escapeHtml(p.name || '')}</b></div>
+              <div><b>${escapeHtml(programTitle)}</b></div>
               ${codeHtml}
             </div>
             <div>${formaChip}</div>
@@ -451,6 +512,7 @@
   async function init() {
     const form = document.querySelector('[data-role=skoly-form]');
     const qEl = document.querySelector('input[data-role=skoly-q]');
+    const codeEl = document.querySelector('input[data-role=skoly-code]');
     const krajEl = document.querySelector('select[data-role=skoly-kraj]');
     const typEl = document.querySelector('select[data-role=skoly-typ]');
     const druhEl = document.querySelector('select[data-role=skoly-druh]');
@@ -544,12 +606,13 @@
 
     const criteriaKey = () => {
       const q = normalizeKey(String(qEl?.value || '').trim());
+      const code = normalizeProgramCode(codeEl?.value || '');
       const krajId = String(krajEl?.value || '').trim();
       const typSkoly = String(typEl?.value || '').trim();
       const druhSkoly = String(druhEl?.value || '').trim();
       const stupen = String(stupenEl?.value || '').trim();
       const forma = String(formaEl?.value || '').trim();
-      return JSON.stringify([q, krajId, typSkoly, druhSkoly, stupen, forma]);
+      return JSON.stringify([q, code, krajId, typSkoly, druhSkoly, stupen, forma]);
     };
 
     const computeHits = () => {
@@ -558,12 +621,14 @@
       const tokenVariants = expandQueryVariants(qRaw);
       const hasTokens = tokenVariants.length > 0;
 
+      const codeQuery = normalizeProgramCode(codeEl?.value || '');
+
       const krajId = String(krajEl?.value || '').trim();
       const typSkoly = String(typEl?.value || '').trim();
       const druhSkoly = String(druhEl?.value || '').trim();
       const stupen = String(stupenEl?.value || '').trim();
       const forma = String(formaEl?.value || '').trim();
-      const hasProgramFilter = Boolean(forma || stupen);
+      const hasProgramFilter = Boolean(forma || stupen || codeQuery);
 
       const hits = [];
 
@@ -575,14 +640,30 @@
           if (!list.map(String).includes(String(druhSkoly))) continue;
         }
 
+        // Include location/address in the searchable school text so queries like
+        // "automechanik, plzen" can match program + locality together.
+        const addr = s?.adresa || {};
+        const schoolHay = normalizeKey(
+          [
+            s?.nk,
+            s?.ak,
+            addr?.obec,
+            addr?.okres,
+            addr?.kraj,
+            addr?.psc,
+            addr?.ulice
+          ]
+            .filter(Boolean)
+            .join(' ')
+        );
+
         const schoolMatch = !hasTokens
           ? true
-          : tokenVariants.some((variant) =>
-              variant.every((t) => tokenInText(String(s.nk || ''), t) || tokenInText(String(s.ak || ''), t))
-            );
+          : tokenVariants.some((variant) => variant.every((t) => tokenInText(schoolHay, t)));
 
         const matchedPrograms = [];
         for (const p of s?.programs || []) {
+          if (codeQuery && !normalizeProgramCode(p.code || '').includes(codeQuery)) continue;
           if (forma && String(p.forma || '') !== forma) continue;
           if (stupen && String(p.stupen || '') !== stupen) continue;
 
@@ -591,7 +672,7 @@
             continue;
           }
 
-          const target = String(p.nk || '') + ' ' + normalizeKey(p.code || '');
+          const target = schoolHay + ' ' + String(p.nk || '') + ' ' + normalizeKey(p.code || '');
           const ok = tokenVariants.some((variant) => variant.every((t) => tokenInText(target, t)));
           if (ok) matchedPrograms.push(p);
         }
@@ -707,6 +788,12 @@
       // light debounce without timers: only run when query is reasonably long
       if (String(qEl.value || '').trim().length >= 3) runSearch({ resetPage: true });
     });
+
+    codeEl?.addEventListener('input', () => {
+      const v = normalizeProgramCode(codeEl.value || '');
+      // Avoid overly noisy filtering while user is typing (similar to text query)
+      if (v.length === 0 || v.length >= 3) runSearch({ resetPage: true });
+    });
     krajEl?.addEventListener('change', () => runSearch({ resetPage: true }));
     typEl?.addEventListener('change', () => runSearch({ resetPage: true }));
     druhEl?.addEventListener('change', () => runSearch({ resetPage: true }));
@@ -715,6 +802,7 @@
 
     clearEl?.addEventListener('click', () => {
       if (qEl) qEl.value = '';
+      if (codeEl) codeEl.value = '';
       if (krajEl) krajEl.value = '';
       if (druhEl) druhEl.value = '';
       if (typEl) typEl.value = '';

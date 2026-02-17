@@ -644,8 +644,19 @@ form[data-role="skoly-form"] .skoly-top-row{
   gap: .8rem;
   flex-wrap: wrap;
 }
-form[data-role="skoly-form"] .skoly-search{ flex: 1 1 520px; min-width: 320px; }
+form[data-role="skoly-form"] .skoly-search-row{
+  display:flex;
+  align-items:flex-end;
+  gap: .35rem;
+  flex: 0 1 600px;
+  min-width: 320px;
+}
+
+form[data-role="skoly-form"] .skoly-search{ flex: 0 0 36ch; min-width: 220px; max-width: 36ch; }
 form[data-role="skoly-form"] .skoly-search .input{ width: 100%; }
+
+form[data-role="skoly-form"] .skoly-code{ flex: 0 0 185px; min-width: 160px; }
+form[data-role="skoly-form"] .skoly-code .input{ width: 100%; }
 
 form[data-role="skoly-form"] .skoly-filters-row{
   display:flex;

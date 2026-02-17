@@ -57,9 +57,16 @@
       <div class="card" style="margin-top: 1rem">
         <form data-role="skoly-form" class="grid" style="gap: .6rem">
           <div class="skoly-top-row col-12">
-            <div class="field skoly-search">
-              <label class="field__label" for="skoly-q">Škola / obor</label>
-              <input id="skoly-q" class="input" data-role="skoly-q" placeholder="Např. nástavba, automechanik, svářeč, Plzeň…" autocomplete="off" />
+            <div class="skoly-search-row" aria-label="Vyhledávání">
+              <div class="field skoly-search">
+                <label class="field__label" for="skoly-q">Škola / obor</label>
+                <input id="skoly-q" class="input" data-role="skoly-q" placeholder="Např. nástavba, automechanik, svářeč, Plzeň…" autocomplete="off" />
+              </div>
+
+              <div class="field skoly-code">
+                <label class="field__label" for="skoly-code">Kód oboru</label>
+                <input id="skoly-code" class="input" data-role="skoly-code" placeholder="např. 23-45-M/01" autocomplete="off" />
+              </div>
             </div>
 
             <div class="skoly-filters-row" aria-label="Filtry">
