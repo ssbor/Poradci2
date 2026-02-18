@@ -238,14 +238,53 @@
 
     document.body.appendChild(overlay);
 
+    let scrollState = null;
+
     const lockScroll = () => {
+      if (scrollState) return;
+      const y = window.scrollY || window.pageYOffset || 0;
+      const body = document.body;
+
+      scrollState = {
+        y,
+        position: body.style.position,
+        top: body.style.top,
+        left: body.style.left,
+        right: body.style.right,
+        width: body.style.width,
+        paddingRight: body.style.paddingRight
+      };
+
+      const scrollbarGap = window.innerWidth - document.documentElement.clientWidth;
+      if (scrollbarGap > 0) body.style.paddingRight = `${scrollbarGap}px`;
+
+      body.style.position = 'fixed';
+      body.style.top = `-${y}px`;
+      body.style.left = '0';
+      body.style.right = '0';
+      body.style.width = '100%';
+
       document.documentElement.classList.add('modal-open');
-      document.body.classList.add('modal-open');
+      body.classList.add('modal-open');
     };
 
     const unlockScroll = () => {
+      if (!scrollState) return;
+      const { y, position, top, left, right, width, paddingRight } = scrollState;
+      const body = document.body;
+
+      body.style.position = position;
+      body.style.top = top;
+      body.style.left = left;
+      body.style.right = right;
+      body.style.width = width;
+      body.style.paddingRight = paddingRight;
+
       document.documentElement.classList.remove('modal-open');
-      document.body.classList.remove('modal-open');
+      body.classList.remove('modal-open');
+
+      scrollState = null;
+      window.scrollTo(0, y);
     };
 
     const close = () => {
