@@ -115,6 +115,13 @@ function getId(value) {
   return "";
 }
 
+function clampText(s, maxLen = 800) {
+  const txt = String(s || "").trim();
+  if (!txt) return "";
+  if (txt.length <= maxLen) return txt;
+  return txt.slice(0, Math.max(0, maxLen - 1)).trimEnd() + "…";
+}
+
 function classifyByRules({ czIscostring, profese, categories }) {
   const digits = String(czIscostring || "").replace(/\D/g, "");
   const profeseLower = String(profese || "").toLowerCase();
@@ -233,9 +240,50 @@ async function loadCiselnikMaps() {
 function normalizeFromMpsvJson(rec, maps) {
   const profese = rec?.pozadovanaProfese?.cs ?? "";
   const isco = rec?.profeseCzIsco?.id ?? "";
+  const isco_code = String(isco || "")
+    .split("/")
+    .pop()
+    .replace(/\D/g, "")
+    .trim();
   const zam = rec?.zamestnavatel?.nazev ?? "";
+  const zam_ico = String(rec?.zamestnavatel?.ico ?? rec?.zamestnavatel?.ic ?? "").trim();
   const mzda_od = rec?.mesicniMzdaOd ?? null;
   const mzda_do = rec?.mesicniMzdaDo ?? null;
+  const portal_id = rec?.portalId ?? null;
+  const offer_id = getId(rec?.id) || (typeof rec?.id === "string" ? rec.id : "");
+  const referencni_cislo = rec?.referencniCislo ?? "";
+  const url_adresa = rec?.urlAdresa ?? "";
+  const info = clampText(rec?.upresnujiciInformace?.cs ?? "", 900);
+
+  const kontakt = rec?.prvniKontaktSeZamestnavatelem?.komuSeHlasit ?? null;
+  const kontakt_jmeno = String(kontakt?.jmeno ?? "").trim();
+  const kontakt_prijmeni = String(kontakt?.prijmeni ?? "").trim();
+  const kontakt_telefon = String(kontakt?.telefon ?? "").trim();
+  const kontakt_email = String(kontakt?.email ?? "").trim();
+  const misto_kontaktu = String(
+    rec?.prvniKontaktSeZamestnavatelem?.kdeSeHlasit?.mistoKontaktu ?? ""
+  ).trim();
+
+  const pocet_mist = rec?.pocetMist ?? null;
+  const hodiny_tydne = rec?.pocetHodinTydne ?? null;
+
+  const vzdelani_id = getId(rec?.minPozadovaneVzdelani);
+  const smennost_id = getId(rec?.smennost);
+  const typ_mzdy_id = getId(rec?.typMzdy);
+
+  const uvazek_ids = Array.isArray(rec?.pracovnePravniVztahy)
+    ? rec.pracovnePravniVztahy.map((x) => getId(x)).filter(Boolean)
+    : [];
+
+  const vyhody = Array.isArray(rec?.vyhodyVolnehoMista)
+    ? rec.vyhodyVolnehoMista
+        .map((x) => String(x?.popis ?? "").trim())
+        .filter(Boolean)
+        .slice(0, 12)
+    : [];
+
+  const datum_vlozeni = String(rec?.datumVlozeni ?? "").trim();
+  const datum_zmeny = String(rec?.datumZmeny ?? "").trim();
 
   // Lokalita – snažíme se získat čitelné názvy + stabilní ID (pro mapování)
   // Preferujeme mistoVykonuPrace.*; často ale bývá prázdné, tak bereme i adresu pracoviště
@@ -246,6 +294,22 @@ function normalizeFromMpsvJson(rec, maps) {
 
   const workplaceAddr = rec?.mistoVykonuPrace?.pracoviste?.[0]?.adresa ?? null;
   const contactAddr = rec?.prvniKontaktSeZamestnavatelem?.kdeSeHlasit?.adresa ?? null;
+
+  const addressToText = (addr) => {
+    if (!addr) return "";
+    const ulice = String(addr?.ulice?.nazev ?? "").trim();
+    const cisloDomovni = addr?.cisloDomovni != null ? String(addr.cisloDomovni).trim() : "";
+    const cisloOrientacni = addr?.cisloOrientacni != null ? String(addr.cisloOrientacni).trim() : "";
+    const cislo = [cisloDomovni, cisloOrientacni ? `/${cisloOrientacni}` : ""].filter(Boolean).join("");
+    const psc = String(addr?.psc ?? "").trim();
+
+    const obecId = getId(addr?.obec);
+    const obecName = (obecId ? maps?.obceById?.get(obecId)?.name : "") || "";
+
+    const line1 = [ulice, cislo].filter(Boolean).join(" ").trim();
+    const line2 = [psc, String(obecName || "").trim()].filter(Boolean).join(" ").trim();
+    return [line1, line2].filter(Boolean).join(", ");
+  };
 
   const krajFromWorkplace = getId(workplaceAddr?.kraj);
   const okresFromWorkplace = getId(workplaceAddr?.okres);
@@ -289,6 +353,31 @@ function normalizeFromMpsvJson(rec, maps) {
     .filter(Boolean)
     .join(", ");
 
+  const pracoviste_adresa = String(addressToText(workplaceAddr) || "").trim();
+  const kontakt_adresa = String(addressToText(contactAddr) || "").trim();
+
+  const misto_vykonu_prace =
+    String(adresaText || "").trim() ||
+    String(pracoviste_adresa || "").trim() ||
+    [obec_name, okres_name, kraj_name].filter(Boolean).join(", ") ||
+    "";
+
+  // Některé záznamy mohou mít přímo uvedené sídlo/adresu zaměstnavatele.
+  // Když to není dostupné, necháváme prázdné (nechceme si vymýšlet).
+  const adresa_firmy = (() => {
+    const directText = String(
+      rec?.zamestnavatel?.adresaText ??
+        rec?.zamestnavatel?.sidloText ??
+        rec?.zamestnavatel?.sidlo ??
+        ""
+    ).trim();
+    if (directText) return directText;
+
+    const addrObj = rec?.zamestnavatel?.adresa ?? rec?.zamestnavatel?.sidloAdresa ?? null;
+    const formatted = String(addressToText(addrObj) || "").trim();
+    return formatted;
+  })();
+
   // 'lokalita' je text, který jde typicky geokódovat (pro výpočet vzdálenosti)
   const mistoKontaktuLooksLikeAddress = (() => {
     if (!mistoKontaktu) return false;
@@ -328,6 +417,9 @@ function normalizeFromMpsvJson(rec, maps) {
     rec?.expirace ??
     "";
 
+  const nastup_od = String(rec?.terminZahajeniPracovnihoPomeru ?? "").trim();
+  const expirace = String(rec?.expirace ?? "").trim();
+
   return {
     // IMPORTANT: UI + chatbot expect NUTS3 code here (e.g. CZ032)
     kraj: String(kraj_nuts3 || "").trim() || "",
@@ -340,10 +432,37 @@ function normalizeFromMpsvJson(rec, maps) {
     lokalita: String(lokalita || ""),
     profese: String(profese || ""),
     cz_isco: String(isco || ""),
+    cz_isco_code: String(isco_code || ""),
     mzda_od: mzda_od != null ? Number(mzda_od) : null,
     mzda_do: mzda_do != null ? Number(mzda_do) : null,
     zamestnavatel: String(zam || ""),
-    datum: String(datum || "")
+    zamestnavatel_ico: String(zam_ico || ""),
+    datum: String(datum || ""),
+    portal_id: portal_id != null ? Number(portal_id) : null,
+    offer_id: String(offer_id || ""),
+    referencni_cislo: String(referencni_cislo || ""),
+    url_adresa: String(url_adresa || ""),
+    info: String(info || ""),
+    kontakt_jmeno,
+    kontakt_prijmeni,
+    kontakt_telefon,
+    kontakt_email,
+    misto_kontaktu,
+    kontakt_adresa,
+    pracoviste_adresa: String(pracoviste_adresa || ""),
+    misto_vykonu_prace: String(misto_vykonu_prace || ""),
+    adresa_firmy: String(adresa_firmy || ""),
+    pocet_mist: pocet_mist != null ? Number(pocet_mist) : null,
+    hodiny_tydne: hodiny_tydne != null ? Number(hodiny_tydne) : null,
+    vzdelani_id: String(vzdelani_id || ""),
+    smennost_id: String(smennost_id || ""),
+    typ_mzdy_id: String(typ_mzdy_id || ""),
+    uvazek_ids,
+    vyhody,
+    datum_vlozeni,
+    datum_zmeny,
+    nastup_od,
+    expirace
   };
 }
 
@@ -402,7 +521,15 @@ function normalizeFromJsonLd(rec) {
     mzda_od: mzda_od != null ? Number(mzda_od) : null,
     mzda_do: mzda_do != null ? Number(mzda_do) : null,
     zamestnavatel: String(zam || ""),
-    datum: String(datum || "")
+    datum: String(datum || ""),
+    portal_id: null,
+    offer_id: String(getId(rec?.id) || ""),
+    referencni_cislo: "",
+    url_adresa: "",
+    info: clampText(
+      rec?.upresnujiciInformace?.cs ?? rec?.description ?? rec?.popis ?? "",
+      900
+    )
   };
 }
 

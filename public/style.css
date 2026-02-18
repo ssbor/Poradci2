@@ -621,6 +621,139 @@ select.select[data-role="jobs-page-size"]{
 
 .jobs-offer__company{ color: var(--muted); margin-top: .12rem; font-size: .86rem; }
 
+.jobs-offer__actions{ margin-top: .45rem; display:flex; gap:.5rem; flex-wrap: wrap; }
+.btn.jobs-more{
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: .78rem;
+  font-weight: 850;
+  letter-spacing: .15px;
+}
+
+/* Práce: detail nabídky (modal) */
+.offer-modal-overlay{
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(2, 6, 23, .55);
+}
+.offer-modal-overlay.is-open{ display:flex; }
+
+html.modal-open,
+body.modal-open{
+  overflow: hidden;
+}
+
+.offer-modal{
+  width: min(860px, 100%);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid rgba(15, 23, 42, .10);
+  box-shadow: 0 20px 70px rgba(0,0,0,.35);
+}
+
+.offer-modal__header{
+  display:flex;
+  align-items:flex-start;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: 1rem 1rem .75rem;
+  border-bottom: 1px solid rgba(15, 23, 42, .10);
+}
+
+.offer-modal__title{
+  font-size: 1.1rem;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.offer-modal__subtitle{
+  margin-top: .25rem;
+  color: var(--muted);
+  font-size: .92rem;
+  white-space: nowrap;
+  overflow:hidden;
+  text-overflow: ellipsis;
+}
+
+.offer-modal__close{
+  line-height: 1;
+  padding: 10px 12px;
+  min-width: 40px;
+  min-height: 40px;
+}
+
+.offer-modal__body{
+  padding: 1rem;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.offer-modal__actions{
+  display:flex;
+  justify-content: flex-end;
+  gap: .5rem;
+  flex-wrap: wrap;
+  padding: .9rem 1rem 1rem;
+  border-top: 1px solid rgba(15, 23, 42, .10);
+}
+
+.offer-detail-grid{
+  display:grid;
+  grid-template-columns: 220px 1fr;
+  gap: .45rem .9rem;
+}
+.offer-detail-grid__k{
+  color: rgba(15, 23, 42, .65);
+  font-weight: 850;
+  font-size: .92rem;
+}
+.offer-detail-grid__v{ font-size: .98rem; }
+
+.offer-bullets{ margin: .25rem 0 0 0; padding-left: 1.1rem; }
+.offer-bullets li{ margin: .15rem 0; }
+
+.offer-info{
+  margin-top: 1rem;
+  padding-top: .9rem;
+  border-top: 1px dashed rgba(15, 23, 42, .18);
+}
+.offer-info__title{ font-weight: 900; margin-bottom: .35rem; }
+.offer-info__text{ color: rgba(15, 23, 42, .88); line-height: 1.45; }
+
+.offer-raw{ margin-top: 1rem; }
+.offer-raw summary{ cursor: pointer; font-weight: 800; color: rgba(15, 23, 42, .86); }
+.offer-raw pre{
+  margin: .6rem 0 0 0;
+  padding: .75rem;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, .04);
+  border: 1px solid rgba(15, 23, 42, .08);
+  max-height: 34vh;
+  overflow: auto;
+  font-size: .86rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (max-width: 720px){
+  .offer-modal-overlay{ padding: .5rem; align-items: stretch; }
+  .offer-modal{ max-height: calc(100vh - 1rem); border-radius: 14px; }
+  .offer-detail-grid{ grid-template-columns: 1fr; }
+  .offer-modal__subtitle{ white-space: normal; }
+  .offer-modal__actions{ flex-direction: column; align-items: stretch; }
+  .offer-modal__actions .btn{ width: 100%; }
+}
+
 .jobs-place{ display:flex; align-items:center; gap:.5rem; min-width:0; }
 .jobs-place__city{ min-width:0; overflow:hidden; text-overflow: ellipsis; white-space: nowrap; }
 .jobs-place__kraj{
@@ -705,6 +838,7 @@ select.select[data-role="jobs-page-size"]{
   .programs-list .tag--kv .tag__sep{ display:inline; }
   .programs-list .tag--kv{ padding: .14rem .35rem; }
 }
+
 .badge{ font-size:.72rem; background:#fff; color:#124a9a; padding:.15rem .45rem; border-radius:999px; border:1px solid rgba(255,255,255,.65); }
 
 /* Vzdělání: slightly more compact filter boxes */

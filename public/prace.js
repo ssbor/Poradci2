@@ -129,6 +129,286 @@
     return i >= 0 ? s.slice(i + 1) : s;
   }
 
+  function humanizeEnumId(id, mapObj) {
+    const raw = String(id || '').trim();
+    if (!raw) return '';
+    const key = shortId(raw).toLowerCase();
+    if (mapObj && Object.prototype.hasOwnProperty.call(mapObj, key)) return mapObj[key];
+    // fallback: drop prefix and make it a bit nicer
+    return shortId(raw)
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (m) => m.toUpperCase());
+  }
+
+  const UVAZEK_LABELS = {
+    plny: 'Plný úvazek',
+    zkraceny: 'Zkrácený úvazek',
+    dpp: 'DPP',
+    dpc: 'DPČ',
+    dohoda_o_provedeni_prace: 'DPP',
+    dohoda_o_pracovni_cinnosti: 'DPČ',
+    sluzebni_pomer: 'Služební poměr',
+    sezoni: 'Sezónní práce'
+  };
+
+  const SMENNOST_LABELS = {
+    jednosm: 'Jednosměnný',
+    dvousm: 'Dvousměnný',
+    trism: 'Třísměnný',
+    nepretrz: 'Nepřetržitý',
+    pruzna: 'Pružná pracovní doba',
+    turnus: 'Turnusový'
+  };
+
+  function humanizeVzdelaniId(id) {
+    const raw = String(id || '').trim();
+    if (!raw) return '';
+    const k = shortId(raw).toLowerCase();
+    if (k.includes('bez')) return 'Bez vzdělání';
+    if (k.includes('zakl')) return 'Základní';
+    if (k.includes('nizsi') || k.includes('niž')) return 'Nižší střední';
+    if (k.includes('vyuc')) return 'Vyučení / střední odborné';
+    if (k.includes('matur')) return 'Střední s maturitou';
+    if (k.includes('stred')) return 'Střední';
+    if (k.includes('vyssi') || k.includes('vo') || k.includes('odbor')) return 'Vyšší odborné';
+    if (k.includes('bakal')) return 'Vysokoškolské (Bc.)';
+    if (k.includes('magist') || k.includes('ing')) return 'Vysokoškolské (Mgr./Ing.)';
+    if (k.includes('doktor') || k.includes('phd')) return 'Vysokoškolské (Ph.D.)';
+    return shortId(raw).replace(/([a-z])([A-Z])/g, '$1 $2');
+  }
+
+  const TYP_MZDY_LABELS = {
+    mesic: 'Měsíční',
+    hod: 'Hodinová',
+    hodin: 'Hodinová',
+    ukol: 'Úkolová',
+    podil: 'Podílová'
+  };
+
+  function escapeHtmlWithBreaks(s) {
+    const txt = String(s || '').trim();
+    if (!txt) return '';
+    return escapeHtml(txt).replace(/\r\n|\r|\n/g, '<br>');
+  }
+
+  let OFFER_MODAL = null;
+
+  function offerDetailUrl(offer) {
+    const direct = String(
+      offer?.url_adresa ?? offer?.urlAdresa ?? offer?.url ?? offer?.detail_url ?? ''
+    ).trim();
+    if (/^https?:\/\//i.test(direct)) return direct;
+
+    const pidRaw = offer?.portal_id ?? offer?.portalId;
+    const pid = pidRaw == null ? '' : String(pidRaw).trim();
+    if (pid) {
+      return `https://www.uradprace.cz/volna-mista-v-cr#/volna-mista-detail/${encodeURIComponent(pid)}`;
+    }
+
+    const idLike = String(offer?.offer_id ?? offer?.id ?? '').trim();
+    const idShort = shortId(idLike);
+    if (/^\d+$/.test(idShort)) {
+      return `https://www.uradprace.cz/volna-mista-v-cr#/volna-mista-detail/${encodeURIComponent(idShort)}`;
+    }
+
+    return '';
+  }
+
+  function ensureOfferModal() {
+    if (OFFER_MODAL) return OFFER_MODAL;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'offer-modal-overlay';
+    overlay.innerHTML = `
+      <div class="offer-modal" role="dialog" aria-modal="true" aria-labelledby="offer-modal-title">
+        <div class="offer-modal__header">
+          <div style="min-width:0">
+            <div class="offer-modal__title" id="offer-modal-title"></div>
+            <div class="offer-modal__subtitle" data-role="offer-modal-subtitle"></div>
+          </div>
+          <button class="btn btn--ghost offer-modal__close" type="button" data-action="offer-modal-close" aria-label="Zavřít">✕</button>
+        </div>
+        <div class="offer-modal__body" data-role="offer-modal-body"></div>
+        <div class="offer-modal__actions">
+          <a class="btn btn--primary" target="_blank" rel="noopener noreferrer" href="#" data-role="offer-modal-link">Otevřít na ÚP</a>
+          <button class="btn btn--ghost" type="button" data-action="offer-modal-close">Zavřít</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const lockScroll = () => {
+      document.documentElement.classList.add('modal-open');
+      document.body.classList.add('modal-open');
+    };
+
+    const unlockScroll = () => {
+      document.documentElement.classList.remove('modal-open');
+      document.body.classList.remove('modal-open');
+    };
+
+    const close = () => {
+      overlay.classList.remove('is-open');
+      unlockScroll();
+    };
+
+    overlay.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      if (t === overlay) return close();
+      if (t.closest('[data-action=offer-modal-close]')) return close();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (!overlay.classList.contains('is-open')) return;
+      close();
+    });
+
+    OFFER_MODAL = {
+      overlay,
+      titleEl: overlay.querySelector('#offer-modal-title'),
+      subtitleEl: overlay.querySelector('[data-role=offer-modal-subtitle]'),
+      bodyEl: overlay.querySelector('[data-role=offer-modal-body]'),
+      linkEl: overlay.querySelector('[data-role=offer-modal-link]'),
+      lockScroll,
+      unlockScroll
+    };
+    return OFFER_MODAL;
+  }
+
+  function openOfferModal(offer) {
+    const m = ensureOfferModal();
+    if (!m?.overlay || !m.titleEl || !m.bodyEl || !m.linkEl || !m.subtitleEl) return;
+
+    const title = String(offer?.profese || '').trim() || 'Nabídka práce';
+    const company = String(offer?.zamestnavatel || '').trim();
+    const city = String(offer?.obec || '').trim();
+    const okres = String(offer?.okres || '').trim();
+    const krajCode = String(offer?.kraj || '').trim();
+    const krajName = String(offer?.kraj_nazev || '').trim() || CZ_REGION_NAME_BY_CODE[krajCode] || '';
+
+    const wage = offerWageText(offer);
+    const mistoVykonuPrace = String(offer?.misto_vykonu_prace || offer?.lokalita || '').trim();
+    const adresaKontaktu = String(offer?.kontakt_adresa || '').trim();
+    const ico = String(offer?.zamestnavatel_ico || '').trim();
+    const czIscoRaw = String(offer?.cz_isco || '').trim();
+    const czIscoCode = String(offer?.cz_isco_code || '').trim() || shortId(czIscoRaw).replace(/\D/g, '');
+    const portalId = offer?.portal_id != null ? String(offer.portal_id).trim() : '';
+    const referencniCislo = String(offer?.referencni_cislo || '').trim();
+    const urlAdresa = String(offer?.url_adresa || '').trim();
+
+    const info = String(offer?.info || '').trim();
+    const contactName = [String(offer?.kontakt_jmeno || '').trim(), String(offer?.kontakt_prijmeni || '').trim()]
+      .filter(Boolean)
+      .join(' ');
+    const contactPhone = String(offer?.kontakt_telefon || '').trim();
+    const contactEmail = String(offer?.kontakt_email || '').trim();
+    const contactPlace = String(offer?.misto_kontaktu || '').trim();
+
+    const benefits = Array.isArray(offer?.vyhody) ? offer.vyhody.filter((x) => String(x || '').trim()) : [];
+    const uvazekIds = Array.isArray(offer?.uvazek_ids) ? offer.uvazek_ids.filter((x) => String(x || '').trim()) : [];
+    const uvazekHuman = uvazekIds.map((id) => humanizeEnumId(id, UVAZEK_LABELS)).filter(Boolean);
+    const educationId = String(offer?.vzdelani_id || '').trim();
+    const educationHuman = humanizeVzdelaniId(educationId);
+    const smennostId = String(offer?.smennost_id || '').trim();
+    const smennostHuman = humanizeEnumId(smennostId, SMENNOST_LABELS);
+    const typMzdyId = String(offer?.typ_mzdy_id || '').trim();
+    const typMzdyHuman = humanizeEnumId(typMzdyId, TYP_MZDY_LABELS);
+    const pocetMist = offer?.pocet_mist != null ? String(offer.pocet_mist) : '';
+    const hodinyTydne = offer?.hodiny_tydne != null ? String(offer.hodiny_tydne) : '';
+    const datumVlozeni = String(offer?.datum_vlozeni || '').trim();
+
+    m.titleEl.textContent = title;
+    m.subtitleEl.textContent = [company, city, krajName].filter(Boolean).join(' · ');
+
+    const employerLine = [
+      company,
+      ico ? `IČO: ${ico}` : ''
+    ].filter(Boolean).join(' · ');
+
+    const rows = [
+      ['Zaměstnavatel', employerLine],
+      ['Místo výkonu práce', mistoVykonuPrace || [city, okres, krajName].filter(Boolean).join(', ')],
+      ['Mzda', wage],
+      ['Úvazek', uvazekHuman.join(', ')],
+      ['Směnnost', smennostHuman],
+      ['Požadované vzdělání', educationHuman],
+      ['Typ mzdy', typMzdyHuman],
+      ['Počet míst', pocetMist],
+      ['Hodin týdně', hodinyTydne],
+      ['Datum vložení', formatOfferDate(datumVlozeni)],
+      ['CZ-ISCO', czIscoCode],
+      ['ID nabídky (ÚP)', portalId],
+      ['Referenční číslo', referencniCislo],
+      ['URL v datech', urlAdresa]
+    ];
+
+    const contactHtml = [
+      contactName ? `<div><b>${escapeHtml(contactName)}</b></div>` : '',
+      adresaKontaktu ? `<div>Adresa: ${escapeHtml(adresaKontaktu)}</div>` : '',
+      contactPhone ? `<div>Tel: <a href="tel:${escapeHtml(contactPhone)}">${escapeHtml(contactPhone)}</a></div>` : '',
+      contactEmail ? `<div>E-mail: <a href="mailto:${escapeHtml(contactEmail)}">${escapeHtml(contactEmail)}</a></div>` : '',
+      contactPlace ? `<div class="muted" style="margin-top:.25rem">${escapeHtml(contactPlace)}</div>` : ''
+    ]
+      .filter(Boolean)
+      .join('');
+
+    m.bodyEl.innerHTML = `
+      <div class="offer-detail-grid">
+        ${rows
+          .filter(([, v]) => String(v || '').trim())
+          .map(
+            ([k, v]) => `
+              <div class="offer-detail-grid__k">${escapeHtml(k)}</div>
+              <div class="offer-detail-grid__v">${escapeHtml(String(v))}</div>
+            `
+          )
+          .join('')}
+
+        ${contactHtml
+          ? `
+            <div class="offer-detail-grid__k">Kontakt</div>
+            <div class="offer-detail-grid__v">${contactHtml}</div>
+          `
+          : ''}
+
+        ${benefits.length
+          ? `
+            <div class="offer-detail-grid__k">Výhody</div>
+            <div class="offer-detail-grid__v">
+              <ul class="offer-bullets">
+                ${benefits.map((b) => `<li>${escapeHtml(String(b))}</li>`).join('')}
+              </ul>
+            </div>
+          `
+          : ''}
+      </div>
+
+      ${info
+        ? `
+          <div class="offer-info">
+            <div class="offer-info__title">Upřesňující informace</div>
+            <div class="offer-info__text">${escapeHtmlWithBreaks(info)}</div>
+          </div>
+        `
+        : ''}
+    `;
+
+    const url = offerDetailUrl(offer);
+    if (url) {
+      m.linkEl.href = url;
+      m.linkEl.style.display = '';
+    } else {
+      m.linkEl.removeAttribute('href');
+      m.linkEl.style.display = 'none';
+    }
+
+    if (typeof m.lockScroll === 'function') m.lockScroll();
+    m.overlay.classList.add('is-open');
+  }
+
   function haversineKm(a, b) {
     const R = 6371;
     const toRad = (x) => (x * Math.PI) / 180;
@@ -505,7 +785,7 @@
     if (!outEl) return;
 
     const rows = jobs
-      .map((j) => {
+      .map((j, idx) => {
         const title = String(j.profese || '').trim() || '—';
         const company = String(j.zamestnavatel || '').trim();
         const city = String(j.obec || j.lokalita || '').trim() || '—';
@@ -513,12 +793,18 @@
         const krajShort = CZ_REGION_SHORT_BY_CODE[krajCode] || CZ_REGION_NAME_BY_CODE[krajCode] || '';
         const mz = offerWageText(j);
         const dt = formatOfferDate(j.datum);
+        const canDetail = !!offerDetailUrl(j);
 
         return `
         <div class="program-row jobs-program-row">
           <div class="jobs-offer">
             <div class="jobs-offer__title"><b>${escapeHtml(title)}</b></div>
             ${company ? `<div class="jobs-offer__company">${escapeHtml(company)}</div>` : ''}
+            <div class="jobs-offer__actions">
+              ${canDetail
+                ? `<button class="btn btn--ghost jobs-more" type="button" data-action="offer-detail" data-idx="${idx}">Více informací</button>`
+                : `<span class="muted" style="font-size:.78rem">Detail není k dispozici</span>`}
+            </div>
           </div>
           <div class="jobs-place">
             <span class="jobs-place__city">${escapeHtml(city)}</span>
@@ -921,6 +1207,7 @@
     };
 
     let lastResults = [];
+    let lastPageJobs = [];
 
     const renderPage = ({ scrollTop = false } = {}) => {
       const hits = lastResults;
@@ -934,6 +1221,7 @@
       const from = (state.page - 1) * safeSize;
       const to = from + safeSize;
       const pageHits = pageSizeRaw === 'all' ? hits : hits.slice(from, to);
+      lastPageJobs = pageHits;
 
       // Update count pill (top pager)
       outEl
@@ -966,6 +1254,14 @@
     outEl?.addEventListener('click', (e) => {
       const t = e.target;
       if (!(t instanceof Element)) return;
+
+      const detailBtn = t.closest('button[data-action=offer-detail]');
+      if (detailBtn) {
+        const idx = Number(detailBtn.getAttribute('data-idx'));
+        const offer = Number.isFinite(idx) && idx >= 0 ? lastPageJobs[idx] : null;
+        if (offer) openOfferModal(offer);
+        return;
+      }
 
       if (t.matches('button[data-role=jobs-page-prev]')) {
         state.page = Math.max(1, Number(state.page || 1) - 1);

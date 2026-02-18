@@ -1,36 +1,36 @@
 [
   {
-    "portalId": 67167781,
-    "id": "VolneMisto/67167781",
-    "referencniCislo": "31479280797",
+    "portalId": 67230918,
+    "id": "VolneMisto/67230918",
+    "referencniCislo": "32625520776",
     "azylant": false,
     "cizinecMimoEu": false,
-    "datumVlozeni": "2025-09-10T00:00:00.000Z",
-    "datumZmeny": "2026-02-11T23:39:50.000Z",
-    "mesicniMzdaDo": 32000,
-    "mesicniMzdaOd": 27000,
+    "datumVlozeni": "2026-02-16T00:00:00.000Z",
+    "datumZmeny": "2026-02-17T00:06:51.000Z",
+    "mesicniMzdaDo": null,
+    "mesicniMzdaOd": 30000,
     "modraKarta": false,
-    "pocetHodinTydne": 37.5,
-    "pocetMist": 2,
+    "pocetHodinTydne": 38.75,
+    "pocetMist": 1,
     "pozadovanaProfese": {
-      "cs": "PRACOVNÍK/PRACOVNICE V SOCIÁLNÍCH SLUŽBÁCH"
+      "cs": "Chovatel hospodářských zvířat (m/ž)"
     },
     "statniSpravaSamosprava": false,
-    "terminUkonceniPracovnihoPomeru": null,
-    "terminZahajeniPracovnihoPomeru": "2025-11-10",
+    "terminUkonceniPracovnihoPomeru": "2028-02-28",
+    "terminZahajeniPracovnihoPomeru": "2026-03-01",
     "souhlasAgenturyAgentura": false,
     "souhlasAgenturyUzivatel": false,
     "upresnujiciInformace": {
-      "cs": "TŘ z:19/6/2025 a:10/11/2025\nNáplň práce:\n- provádí pečovatelskou činnost v pobytové službě, spočívající ve vykonávání obslužných činností, spojených s přímým stykem s klienty, kteří trpí fyzickými a psychickými obtížemi, zdravotními problémy\n- klientům poskytuje podporu, péči nebo pomoc v denních činnostech, upravuje pokoje, převléká lůžkoviny, pomáhá klientům u jídla, vykonává jednoduché ošetřovatelské výkony a komplexní péči o klienty s omezenou pohyblivostí nebo nepohyblivé, inkontinentní, s těžkým zdravotním postižením.\nNabízíme:\n- v pracovních dnech svoz.\n- 25 dnů dovolené, možnost stravování.\nKontakt telefonicky, emailem."
+      "cs": "První kontakt e-mailem nebo telefonicky.\n\nKrátkodobé zaměstnání."
     },
     "urlAdresa": null,
     "zamestnaneckaKarta": false,
-    "expirace": null,
+    "expirace": "2026-04-03",
     "minPozadovaneVzdelani": {
       "id": "VzdelaniDetailniKategorie/zaklPraktSkol"
     },
     "smennost": {
-      "id": "Smennost/jednoSm"
+      "id": "Smennost/dvouSm"
     },
     "typMzdy": {
       "id": "TypMzdy/mesic"
@@ -48,42 +48,44 @@
       "pracoviste": [
         {
           "email": null,
-          "nazev": "Obecně prospěšná společnost Důstojnost - pracoviště Nýdek",
+          "nazev": "GenAgro Říčany, a.s. - 01",
           "telefon": null,
           "adresa": {
-            "cisloDomovni": 100,
+            "cisloDomovni": 458,
             "cisloOrientacni": null,
-            "dodatekAdresy": "správně Nýdek ev. č. 100, 739 96 Nýdek",
-            "kodAdresnihoMista": 14219034,
-            "psc": null,
+            "dodatekAdresy": null,
+            "kodAdresnihoMista": 13246011,
+            "psc": "66482",
             "typCislaDomovniho": {
-              "id": "TypStavebnihoObjektu/2"
+              "id": "TypStavebnihoObjektu/1"
             },
             "kraj": {
-              "id": "Kraj/132"
+              "id": "Kraj/116"
             },
             "okres": {
-              "id": "Okres/3802"
+              "id": "Okres/3703"
             },
             "obec": {
-              "id": "Obec/507091"
+              "id": "Obec/583839"
             },
             "mestskyObvodMestskaCast": null,
             "mestskyObvodVPraze": null,
             "castObce": {
-              "id": "CastObce/108189"
+              "id": "CastObce/145548"
             },
-            "ulice": null
+            "ulice": {
+              "nazev": "Zemědělská"
+            }
           }
         }
       ]
     },
     "zamestnavatel": {
-      "ico": "28599110",
-      "nazev": "Obecně prospěšná společnost Důstojnost"
+      "ico": "64506843",
+      "nazev": "GenAgro Říčany, a.s."
     },
     "profeseCzIsco": {
-      "id": "CzIsco/3412"
+      "id": "CzIsco/61213"
     },
     "pracovnePravniVztahy": [
       {
@@ -96,59 +98,54 @@
       }
     ],
     "kontaktniPracoviste": {
-      "id": "KontaktniPracoviste/FMA"
+      "id": "KontaktniPracoviste/BOA"
     },
-    "vyhodyVolnehoMista": [
-      {
-        "vyhoda": {
-          "id": "VyhodyVolnehoMista/jine"
-        },
-        "popis": "- 25 dnů dovolené, možnost stravování."
-      }
-    ],
+    "vyhodyVolnehoMista": null,
     "pozadovanaDovednost": null,
     "pozadovanaJazykovaZnalost": null,
     "pozadovanePovolani": null,
     "pozadovaneVzdelani": null,
     "prvniKontaktSeZamestnavatelem": {
       "komuSeHlasit": {
-        "email": "administrace@dustojnost.cz",
-        "telefon": "736 450 369",
-        "jmeno": "Monika",
-        "prijmeni": "Ćmielová",
-        "titulPredJmenem": null,
+        "email": "studeny@genagro.cz",
+        "telefon": "546 427 316",
+        "jmeno": "Stanislav",
+        "prijmeni": "Studený",
+        "titulPredJmenem": "Ing.",
         "titulZaJmenem": null,
         "poziceVeSpolecnosti": null
       },
       "kdeSeHlasit": {
         "email": null,
         "telefon": null,
-        "mistoKontaktu": "Obecně prospěšná společnost Důstojnost - pracoviště Nýdek",
+        "mistoKontaktu": "GenAgro Říčany, a.s. - 01",
         "adresa": {
-          "cisloDomovni": 100,
+          "cisloDomovni": 458,
           "cisloOrientacni": null,
-          "dodatekAdresy": "správně Nýdek ev. č. 100, 739 96 Nýdek",
-          "kodAdresnihoMista": 14219034,
-          "psc": "73995",
+          "dodatekAdresy": "Zemědělská č.p. 458, Říčany u Brna 664 82",
+          "kodAdresnihoMista": 13246011,
+          "psc": "66482",
           "typCislaDomovniho": {
-            "id": "TypStavebnihoObjektu/2"
+            "id": "TypStavebnihoObjektu/1"
           },
           "kraj": {
-            "id": "Kraj/132"
+            "id": "Kraj/116"
           },
           "okres": {
-            "id": "Okres/3802"
+            "id": "Okres/3703"
           },
           "obec": {
-            "id": "Obec/507091"
+            "id": "Obec/583839"
           },
           "mestskyObvodMestskaCast": null,
           "mestskyObvodVPraze": null,
           "castObce": {
-            "id": "CastObce/108189"
+            "id": "CastObce/145548"
           },
           "nazevCastiObce": null,
-          "ulice": null
+          "ulice": {
+            "nazev": "Zemědělská"
+          }
         }
       }
     }
