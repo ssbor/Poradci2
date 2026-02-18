@@ -260,7 +260,8 @@ ol.steps > li::before{
 
 /* Pager select: add a visible dropdown arrow (native arrow is hidden by appearance:none) */
 div[data-role="pager"] select.select[data-role="page-size"],
-select.select[data-role="skoly-page-size"]{
+select.select[data-role="skoly-page-size"],
+select.select[data-role="jobs-page-size"]{
   padding-right: 2.15rem;
   cursor: pointer;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.25 6 6.25 11 1.25' fill='none' stroke='%2364718a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -289,6 +290,12 @@ select.select[data-role="skoly-page-size"]{
   height: 4px;
   background: linear-gradient(90deg, rgba(19,102,214,1) 0%, rgba(90,158,246,1) 100%);
 }
+.card--jobs{
+  border-color: rgba(14,165,233,.28);
+}
+.card--jobs::before{
+  background: linear-gradient(90deg, rgba(14,165,233,1) 0%, rgba(34,197,94,1) 100%);
+}
 .card--edu::before{ background: linear-gradient(90deg, rgba(79,70,229,1) 0%, rgba(139,92,246,1) 100%); }
 .card--courses::before{ background: linear-gradient(90deg, #f97316 0%, #fb923c 100%); }
 
@@ -305,6 +312,13 @@ select.select[data-role="skoly-page-size"]{
   color: #fff;
 }
 .btn--courses:hover{ background: linear-gradient(120deg, #ea580c 0%, #f97316 100%); }
+
+.btn--jobs{
+  background: linear-gradient(120deg, rgba(14,165,233,1) 0%, rgba(34,197,94,1) 100%);
+  border-color: rgba(14,165,233,.65);
+  color: #fff;
+}
+.btn--jobs:hover{ background: linear-gradient(120deg, #0284c7 0%, #16a34a 100%); }
 
 .btn--purple-dark{
   background: linear-gradient(120deg, #4338ca 0%, #7c3aed 100%);
@@ -326,6 +340,14 @@ select.select[data-role="skoly-page-size"]{
   color: #fff;
 }
 .btn--primary-dark:hover{ background: linear-gradient(120deg, #0b3d82 0%, var(--primary-700) 100%); }
+
+/* Dark hero button for Práce page (needs to be darker than the hero background) */
+.btn--jobs-dark{
+  background: linear-gradient(120deg, #0284c7 0%, #16a34a 100%);
+  border-color: rgba(0,0,0,.32);
+  color: #fff;
+}
+.btn--jobs-dark:hover{ background: linear-gradient(120deg, #0369a1 0%, #15803d 100%); }
 
 .btn--green-dark{
   background: linear-gradient(120deg, var(--green-700) 0%, var(--green) 100%);
@@ -575,6 +597,46 @@ select.select[data-role="skoly-page-size"]{
   align-items: baseline;
   margin-top: .9rem;
 }
+
+/* Práce: 4 sloupce (Nabídka | Město a kraj | Mzda | Datum) */
+.programs-head.jobs-programs-head,
+.program-row.jobs-program-row{
+  grid-template-columns: minmax(0, 1fr) minmax(0, 260px) 120px 140px;
+}
+
+.programs-list .jobs-program-row{
+  border: 1px solid rgba(226, 232, 240, .95);
+  border-radius: 14px;
+  padding: .6rem .75rem;
+  background: linear-gradient(180deg, rgba(255,255,255,.92) 0%, rgba(248,250,252,.92) 100%);
+  box-shadow: 0 1px 0 rgba(15, 23, 42, .03);
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+}
+.programs-list .jobs-program-row:hover{
+  transform: translateY(-1px);
+  border-color: rgba(203, 213, 225, .95);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, .06);
+}
+.programs-list .jobs-program-row + .jobs-program-row{ border-top: none; margin-top: .55rem; }
+
+.jobs-offer__company{ color: var(--muted); margin-top: .12rem; font-size: .86rem; }
+
+.jobs-place{ display:flex; align-items:center; gap:.5rem; min-width:0; }
+.jobs-place__city{ min-width:0; overflow:hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jobs-place__kraj{
+  flex: 0 0 auto;
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .25px;
+  padding: .14rem .42rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  color: rgba(36,74,142,.92);
+  background: rgba(219,234,254,.85);
+  border: 1px solid rgba(191,219,254,.95);
+}
+
+.jobs-wage{ text-align:right; font-variant-numeric: tabular-nums; }
 .programs-head__title{
   color: var(--muted);
   font-weight: 800;
@@ -685,6 +747,51 @@ form[data-role="skoly-form"] select[data-role="skoly-stupen"]{ max-width: 185px;
 
 /* Ensure action row spans full width */
 form[data-role="skoly-form"] .col-12{ grid-column: 1 / -1; }
+
+/* Práce: form layout + school suggest dropdown */
+form[data-role="jobs-form"] .jobs-profile-row,
+form[data-role="jobs-form"] .jobs-search-row{
+  display:flex;
+  align-items:flex-end;
+  gap: .55rem;
+  flex-wrap: wrap;
+}
+
+form[data-role="jobs-form"] .jobs-school{ position: relative; flex: 1 1 44ch; min-width: 280px; max-width: 64ch; }
+form[data-role="jobs-form"] .jobs-program{ flex: 0 1 34ch; min-width: 220px; max-width: 44ch; }
+form[data-role="jobs-form"] .jobs-focus{ flex: 0 1 30ch; min-width: 200px; max-width: 40ch; }
+form[data-role="jobs-form"] .jobs-q{ flex: 1 1 44ch; min-width: 280px; max-width: 64ch; }
+form[data-role="jobs-form"] .jobs-location{ position: relative; flex: 0 1 34ch; min-width: 240px; max-width: 44ch; }
+
+form[data-role="jobs-form"] .jobs-suggest{
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + .35rem);
+  z-index: 50;
+}
+
+.jobs-suggest__box{
+  border: 1px solid rgba(0,0,0,.12);
+  border-radius: .7rem;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(0,0,0,.12);
+  overflow: hidden;
+}
+
+.jobs-suggest__item{
+  width: 100%;
+  text-align: left;
+  padding: .6rem .75rem;
+  border: 0;
+  border-bottom: 1px solid rgba(0,0,0,.06);
+  background: transparent;
+  cursor: pointer;
+}
+
+.jobs-suggest__item:hover{ background: rgba(14,165,233,.08); }
+.jobs-suggest__title{ font-weight: 700; }
+.jobs-suggest__meta{ font-size: .9rem; opacity: .75; }
 
 .muted{ color: var(--muted); }
 

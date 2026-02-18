@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Poradci – SŠ Bor</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="style.css?v=20260213-1">
+<link rel="stylesheet" href="style.css?v=20260218-3">
 <link rel="stylesheet" href="chatbot.css">
 </head>
 <body>
@@ -18,7 +18,8 @@
       </div>
     </a>
     <nav class="nav" aria-label="Hlavní navigace">
-      <a href="#obory">Obory</a>
+      <a href="#rozcestnik">Rozcestník</a>
+      <a href="prace.html">Práce</a>
       <a href="vzdelani.html">Vzdělání</a>
       <a href="kurzy.html">Kurzy</a>
       <a href="#faq">FAQ</a>
@@ -33,83 +34,51 @@
       <div class="hero-grid">
         <div>
           <h1>Poradci a uplatnění – rychlý rozcestník</h1>
-          <p>Úvodní stránka je teď krátká a přehledná: obory jsou rozdělené na samostatné stránky a sem přibude časem i nabídka kurzů.</p>
+          <p>Úvodní stránka je jednoduchý rozcestník pro celou ČR: práce, vzdělání a kurzy. Vyhledávání pracovních nabídek není omezené na konkrétní školu nebo obor.</p>
           <ul class="checklist">
-            <li>Vyberete obor a lokalitu (kraj / zahraničí)</li>
-            <li>Uvidíte přehled mezd, top zaměstnavatele a tabulku nabídek</li>
-            <li>Do budoucna: kurzy, workshopy, materiály a přihlášky</li>
+            <li>Práce: filtry (kraj, mzda, dojezd) a reálná data MPSV</li>
+            <li>Vzdělání: nástavby, zkrácené studium, VOŠ/VŠ</li>
+            <li>Kurzy: workshopy, rekvalifikace, materiály</li>
           </ul>
           <div class="hero-actions">
-            <a class="btn btn--primary-dark" href="#obory">Vybrat obor</a>
+            <a class="btn btn--primary-dark" href="prace.html">Pracovní nabídky</a>
             <a class="btn btn--primary-dark" href="vzdelani.html">Vzdělání po škole</a>
             <a class="btn btn--primary-dark" href="kurzy.html">Kurzy</a>
           </div>
         </div>
         <div class="card" style="border-color: rgba(255,255,255,.25); background: rgba(255,255,255,.14); color: #fff;">
           <h3 style="margin-top:0; color:#fff;">Tip</h3>
-          <p style="margin: .35rem 0 0 0; color: rgba(255,255,255,.92)">Klikněte na obor níže. Každý má vlastní stránku – už to není „všechno na jedné“.</p>
+          <p style="margin: .35rem 0 0 0; color: rgba(255,255,255,.92)">Začni nejdřív Prací: můžeš hledat profese napříč celou ČR a filtrovat podle kraje, mzdy a dojezdu.</p>
           <ul class="checklist">
-            <li>Automechanik</li>
-            <li>Opravář zemědělských strojů</li>
-            <li>Kuchař‑číšník</li>
+            <li>Pracovní nabídky</li>
+            <li>Vzdělání po škole</li>
+            <li>Kurzy a rekvalifikace</li>
           </ul>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="section" id="obory">
-    <h2 class="section-title">Obory</h2>
-    <p class="section-sub">Rozklikněte obor a podívejte se na uplatnění a nabídky práce.</p>
+  <section class="section" id="rozcestnik">
+    <h2 class="section-title">Rozcestník</h2>
+    <p class="section-sub">Vyber si, co teď řešíš: práce, vzdělání nebo kurzy.</p>
     <div class="grid" style="margin-top: 1rem">
-      <div class="card card--obor card--auto col-4">
-        <h3>Automechanik</h3>
-        <p>Práce v ČR i dojezdově v zahraničí.</p>
+      <div class="card card--feature card--jobs col-4">
+        <div class="card-title-row">
+          <h3>Pracovní nabídky</h3>
+        </div>
+        <p class="muted">Vyhledávání pozic napříč celou ČR. Filtruj kraj, mzdu a dojezd.</p>
         <ul class="meta-list">
-          <li>Filtr lokality</li>
-          <li>Přehled mezd</li>
-          <li>Poslední nabídky</li>
+          <li>Reálná data MPSV</li>
+          <li>Moje poloha + dojezd</li>
+          <li>Stránkování a rychlé filtrování</li>
         </ul>
         <div style="margin-top: .9rem">
-          <a class="btn btn--primary" href="obor-automechanik.html">Otevřít obor</a>
+          <a class="btn btn--jobs" href="prace.html">Otevřít pracovní nabídky</a>
         </div>
       </div>
 
-      <div class="card card--obor card--agri col-4">
-        <h3>Opravář zemědělských strojů</h3>
-        <p>Mechanika zemědělské techniky a servis.</p>
-        <ul class="meta-list">
-          <li>Filtr lokality</li>
-          <li>Top zaměstnavatelé</li>
-          <li>Tabulka nabídek</li>
-        </ul>
-        <div style="margin-top: .9rem">
-          <a class="btn btn--primary" href="obor-opravar-zs.html" style="background: var(--green); border-color: var(--green);">Otevřít obor</a>
-        </div>
-      </div>
-
-      <div class="card card--obor card--gastro col-4">
-        <h3>Kuchař‑číšník</h3>
-        <p>Gastro provozy, hotely, catering.</p>
-        <ul class="meta-list">
-          <li>Filtr lokality</li>
-          <li>Přehled mezd</li>
-          <li>Poslední nabídky</li>
-        </ul>
-        <div style="margin-top: .9rem">
-          <a class="btn btn--primary" href="obor-gastro.html" style="background: var(--red); border-color: var(--red);">Otevřít obor</a>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section" id="vzdelani">
-    <div class="grid" style="margin-bottom: .25rem">
-      <div class="col-6"><h2 class="section-title" style="margin-bottom: 0">Vzdělání</h2></div>
-      <div class="col-6"><h2 class="section-title" style="margin-bottom: 0">Kurzy</h2></div>
-    </div>
-    <div class="grid" style="margin-top: 1rem">
-      <div class="card card--feature card--edu col-6">
+      <div class="card card--feature card--edu col-4">
         <div class="card-title-row">
           <h3>Vzdělání po škole</h3>
         </div>
@@ -124,7 +93,7 @@
         </div>
       </div>
 
-      <div class="card card--feature card--courses col-6">
+      <div class="card card--feature card--courses col-4">
         <div class="card-title-row">
           <h3>Kurzy a rekvalifikace</h3>
         </div>
@@ -181,7 +150,7 @@
     <div class="footer-grid">
       <div>
         <strong>SŠ Bor – poradci</strong>
-        <div class="muted">Rychlý rozcestník + samostatné stránky oborů.</div>
+        <div class="muted">Rychlý rozcestník: práce, vzdělání a kurzy.</div>
       </div>
       <div class="muted">Tip: když mi pošlete texty pro „Kurzy“ a „Poradci“, doplním je do layoutu.</div>
     </div>
