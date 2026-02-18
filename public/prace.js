@@ -260,7 +260,7 @@
 
     const range = (od != null ? fmtInt(od) : '') + (doo != null ? '–' + fmtInt(doo) : '');
     if (!range) return '—';
-    return offerWageIsHourly(offer) ? `${range} Kč/h` : range;
+    return offerWageIsHourly(offer) ? `${range}\u00A0Kč/h` : `${range}\u00A0Kč`;
   }
 
   function formatOfferDate(datum) {

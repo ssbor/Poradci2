@@ -636,7 +636,7 @@ select.select[data-role="jobs-page-size"]{
   border: 1px solid rgba(191,219,254,.95);
 }
 
-.jobs-wage{ text-align:right; font-variant-numeric: tabular-nums; }
+.jobs-wage{ text-align:right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .programs-head__title{
   color: var(--muted);
   font-weight: 800;
