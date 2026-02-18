@@ -671,6 +671,35 @@ select.select[data-role="jobs-page-size"]{
   .programs-head{ display:none; }
   .program-row{ grid-template-columns: 1fr; gap: .2rem; border-top: none; }
   .program-row + .program-row{ border-top: 1px dashed rgba(231,238,248,.95); }
+
+  /* Práce: make rows more compact on mobile (card-like layout) */
+  .program-row.jobs-program-row{
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: .35rem .6rem;
+    align-items: baseline;
+    padding: .7rem .75rem;
+  }
+  .program-row.jobs-program-row > :nth-child(1){ grid-column: 1 / -1; }
+  .program-row.jobs-program-row > :nth-child(2){ grid-column: 1 / 2; }
+  .program-row.jobs-program-row > :nth-child(3){
+    grid-column: 2 / 3;
+    justify-self: end;
+    text-align: right;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+  }
+  .program-row.jobs-program-row > :nth-child(4){
+    grid-column: 2 / 3;
+    justify-self: end;
+    text-align: right;
+    color: var(--muted);
+    font-size: .82rem;
+    font-weight: 750;
+    white-space: nowrap;
+  }
+  .jobs-place{ flex-wrap: wrap; row-gap: .25rem; }
+  .jobs-place__city{ white-space: normal; overflow: visible; text-overflow: clip; }
+
   /* On mobile, show the chip keys again */
   .programs-list .tag--kv .tag__k,
   .programs-list .tag--kv .tag__sep{ display:inline; }
