@@ -831,7 +831,7 @@
         const krajCode = String(j.kraj || '').trim();
         const krajShort = CZ_REGION_SHORT_BY_CODE[krajCode] || CZ_REGION_NAME_BY_CODE[krajCode] || '';
         const mz = offerWageText(j);
-        const dt = formatOfferDate(j.datum);
+        const dt = formatOfferDate(j.datum_vlozeni || j.datum);
         const canDetail = !!offerDetailUrl(j);
 
         return `
@@ -862,7 +862,7 @@
           <div class="programs-head__title">Nabídka</div>
           <div class="programs-head__col">Město a kraj</div>
           <div class="programs-head__col">Mzda</div>
-          <div class="programs-head__col" style="text-align:right">Datum přidání</div>
+            <div class="programs-head__col" style="text-align:right">Datum vložení</div>
         </div>
         <div class="programs-list">
           ${rows || '<div class="muted" style="margin-top:.6rem">Nic nenalezeno.</div>'}
@@ -1532,8 +1532,8 @@
       }
 
       withKm.sort((a, b) => {
-        const ad = String(a?.datum || '');
-        const bd = String(b?.datum || '');
+        const ad = String(a?.datum_vlozeni || a?.datum || '');
+        const bd = String(b?.datum_vlozeni || b?.datum || '');
         if (bd !== ad) return bd.localeCompare(ad);
         return String(a?.profese || '').localeCompare(String(b?.profese || ''), 'cs');
       });
