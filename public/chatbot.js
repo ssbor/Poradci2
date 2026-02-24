@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		: document.getElementById('chat-send-btn');
 	const statusEl = isEmbedded ? advisorRoot.querySelector('[data-role="advisor-status"]') : null;
 	const embeddedHeaderP = isEmbedded ? advisorRoot.querySelector('.chat-header p') : null;
+	const embeddedModeBadge = isEmbedded ? advisorRoot.querySelector('[data-role="advisor-mode-badge"]') : null;
 
 	// If neither embedded nor floating markup exists, do nothing.
 	if (!chatMessages || !chatInput || !chatSendButton) return;
@@ -63,6 +64,22 @@ document.addEventListener('DOMContentLoaded', () => {
 	const applyEmbeddedCopy = () => {
 		if (!isEmbedded) return;
 		const mode = state.mode;
+
+		if (embeddedModeBadge) {
+			const label =
+				mode === 'jobs'
+					? 'Práce'
+					: mode === 'edu'
+						? 'Vzdělání'
+						: mode === 'courses'
+							? 'Kurzy'
+							: 'Vše';
+			embeddedModeBadge.textContent = label;
+			embeddedModeBadge.classList.toggle('is-jobs', mode === 'jobs');
+			embeddedModeBadge.classList.toggle('is-edu', mode === 'edu');
+			embeddedModeBadge.classList.toggle('is-courses', mode === 'courses');
+		}
+
 		const placeholder =
 			mode === 'jobs'
 				? 'Např. "Svářeč, Plzeň, dojezd 20 km, min. 35 000"'
@@ -291,7 +308,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			advisorRoot
 				.querySelectorAll('[data-role="advisor-mode"]')
 				.forEach((b) => b.classList.toggle('is-active', b === btn));
-			addMessageToChat(`Režim: ${state.mode === 'jobs' ? 'Pracovní nabídky' : state.mode === 'edu' ? 'Vzdělání' : state.mode === 'courses' ? 'Kurzy' : 'Vše'}`, 'bot');
 		});
 	}
 });
