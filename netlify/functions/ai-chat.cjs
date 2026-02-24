@@ -14,6 +14,12 @@ let OFFERS_CACHE = {
   offers: null
 };
 
+let SCHOOLS_CACHE = {
+  at: 0,
+  built_at: '',
+  schools: null
+};
+
 function normalizeText(s) {
   return String(s || '')
     .toLowerCase()
@@ -31,6 +37,14 @@ function tokensFromQuery(q) {
     .filter(Boolean)
     .filter((x) => x.length >= 2);
   return Array.from(new Set(t)).slice(0, 12);
+}
+
+function normalizeProgramCode(s) {
+  return String(s || '')
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, '')
+    .replace(/[^0-9A-Z\/-]+/g, '');
 }
 
 function comparableDateKey(raw) {
@@ -97,6 +111,117 @@ async function loadOffersFromSite(event) {
     offers
   };
   return OFFERS_CACHE;
+}
+
+async function loadSchoolsFromSite(event) {
+  const now = Date.now();
+  if (SCHOOLS_CACHE.schools && now - SCHOOLS_CACHE.at < 30 * 60 * 1000) return SCHOOLS_CACHE;
+
+  const proto = String(event?.headers?.['x-forwarded-proto'] || 'https');
+  const host = String(event?.headers?.host || '').trim();
+  if (!host) return SCHOOLS_CACHE;
+  const base = `${proto}://${host}`;
+
+  const resp = await fetch(`${base}/data/skoly_index.json`, {
+    headers: { 'cache-control': 'no-cache' }
+  });
+  if (!resp.ok) return SCHOOLS_CACHE;
+  const data = await resp.json();
+  const schools = Array.isArray(data?.schools) ? data.schools : [];
+  SCHOOLS_CACHE = {
+    at: now,
+    built_at: String(data?.built_at || ''),
+    schools
+  };
+  return SCHOOLS_CACHE;
+}
+
+function labelForma(id) {
+  const s = String(id || '');
+  const k = s.includes('/') ? s.split('/').pop() : s;
+  const m = {
+    prez: 'Prezenční',
+    den: 'Denní',
+    komb: 'Kombinované',
+    dal: 'Dálkové',
+    vec: 'Večerní',
+    dist: 'Distanční',
+    jina: 'Jiná'
+  };
+  return m[k] || k || '';
+}
+
+function labelStupen(id) {
+  const s = String(id || '');
+  const k = s.includes('/') ? s.split('/').pop() : s;
+  const m = {
+    vyucni: 'Výuční list',
+    maturit: 'Maturita',
+    bakal: 'Bakalář',
+    magis: 'Magistr',
+    doktor: 'Doktor'
+  };
+  return m[k] || k || '';
+}
+
+function recommendSchools(schools, search) {
+  const qRaw = String(search?.q || '').trim();
+  const q = normalizeText(qRaw);
+  const tokens = tokensFromQuery(q);
+  const nuts3 = String(search?.kraj || '').trim(); // we use NUTS3 here
+  const codeLike = normalizeProgramCode(qRaw);
+
+  if (!tokens.length && !codeLike) return [];
+
+  const out = [];
+  for (const s of schools) {
+    if (nuts3 && String(s?.adresa?.nuts3 || '').trim() !== nuts3) continue;
+
+    const schoolTxt = normalizeText([s?.nk, s?.name, s?.adresa?.obec, s?.adresa?.kraj, s?.adresa?.nuts3].filter(Boolean).join(' | '));
+
+    let schoolScore = 0;
+    for (const t of tokens) {
+      if (schoolTxt.includes(t)) schoolScore += 3;
+    }
+
+    const programs = Array.isArray(s?.programs) ? s.programs : [];
+    let best = null;
+    for (const p of programs) {
+      const pTxt = normalizeText([p?.nk, p?.name, p?.code, p?.forma, p?.stupen].filter(Boolean).join(' | '));
+      let pScore = 0;
+      for (const t of tokens) {
+        if (pTxt.includes(t)) pScore += 8;
+      }
+      if (codeLike) {
+        const pc = normalizeProgramCode(p?.code);
+        if (pc && codeLike === pc) pScore += 30;
+        else if (pc && codeLike.includes(pc)) pScore += 10;
+        else if (pc && pc.includes(codeLike)) pScore += 12;
+      }
+      if (pScore <= 0) continue;
+      if (!best || pScore > best.score) best = { p, score: pScore };
+    }
+
+    const total = schoolScore + (best ? best.score : 0);
+    if (total <= 0) continue;
+    out.push({ s, p: best?.p || null, score: total });
+  }
+
+  out.sort((a, b) => b.score - a.score);
+  return out.slice(0, 5).map(({ s, p }) => ({
+    school_id: String(s?.id || ''),
+    school_name: String(s?.name || ''),
+    obec: String(s?.adresa?.obec || ''),
+    kraj: String(s?.adresa?.kraj || ''),
+    nuts3: String(s?.adresa?.nuts3 || ''),
+    url: String(s?.url || ''),
+    program_name: String(p?.name || ''),
+    program_code: String(p?.code || ''),
+    delka: p?.delka ?? null,
+    forma: labelForma(p?.forma),
+    stupen: labelStupen(p?.stupen),
+    ukonceni: String(p?.ukonceni || '')
+  }));
 }
 
 function recommendOffers(offers, search) {
@@ -229,17 +354,18 @@ exports.handler = async function handler(event) {
   const system = {
     role: 'system',
     content:
-      'Jsi chytrý kariérový poradce pro web SŠ Bor. ' +
-      'Režimy: all (vše dohromady), jobs (pracovní nabídky), edu (vzdělání), courses (kurzy). ' +
-      'Cíl: z textu uživatele vytěžit informace o vzdělání, zkušenostech, dovednostech a preferencích. ' +
-      'Vždy se snaž 1–2 doplňujícími otázkami upřesnit: lokalitu (město/kraj), dojezd, očekávanou mzdu, typ úvazku a relevantní praxi. ' +
+      'Jsi chytrý poradce pro web SŠ Bor. ' +
+      'Režim je daný polem mode: all (vše), jobs (pracovní nabídky), edu (vzdělání/školy), courses (kurzy). ' +
+      'Chovej se jako SPECIALISTA podle režimu: ' +
+      '- jobs: doptávej se na lokalitu (město/kraj), dojezd, mzdu, úvazek, praxi, dovednosti. ' +
+      '- edu: doptávej se na úroveň (výuční list/maturita/VOŠ/VŠ), obor, kraj/město, formu (denní/dálková/kombinovaná), a zda jde o nástavbu nebo změnu oboru. ' +
+      '- courses: doptávej se na cíl (rekvalifikace vs doplnění), časové možnosti, rozpočet a lokalitu/online. ' +
       'Důležité: nepřepínej stránku ani nenařizuj proklik; jen konverzuj a doptávej se. ' +
       'Vždy odpovídej ČESKY. ' +
       'V odpovědi vrať POUZE JSON objekt (bez markdownu). ' +
       'Drž se schématu: ' +
       '{"reply":string,"profile":{...},"search":{"q":string,"kraj":string|null,"place":string|null,"minMzda":number|null,"dojezdKm":number|null},"follow_up":string|null}. ' +
-      'Pro režim jobs se snaž vyplnit search.q (klíčová slova) a případně search.kraj/place/minMzda/dojezdKm. ' +
-      'Pro edu/courses může být search.q prázdné. '
+      'V edu/courses můžeš použít search.q pro klíčová slova (obor/škola/kraj/forma), i když nejde o práci.'
   };
 
   const ctxMsg = {
@@ -303,6 +429,7 @@ exports.handler = async function handler(event) {
 
     const out = outParsed.value || {};
     let recommendations = [];
+    let edu_recommendations = [];
     let actions = [];
     try {
       const cache = await loadOffersFromSite(event);
@@ -310,6 +437,16 @@ exports.handler = async function handler(event) {
       if (mode === 'jobs' && offers.length && out?.search) recommendations = recommendOffers(offers, out.search);
     } catch {
       // ignore recommendations errors
+    }
+
+    try {
+      if (mode === 'edu' && out?.search) {
+        const cache = await loadSchoolsFromSite(event);
+        const schools = Array.isArray(cache?.schools) ? cache.schools : [];
+        if (schools.length) edu_recommendations = recommendSchools(schools, out.search);
+      }
+    } catch {
+      // ignore edu recommendations errors
     }
 
     const followUpTxt = String(out?.follow_up || '').trim();
@@ -341,7 +478,7 @@ exports.handler = async function handler(event) {
       }
     }
 
-    return json(200, { ...out, mode, recommendations, actions }, { 'access-control-allow-origin': '*' });
+    return json(200, { ...out, mode, recommendations, edu_recommendations, actions }, { 'access-control-allow-origin': '*' });
   } catch (e) {
     return json(500, { error: 'Server error.', details: String(e?.message || e) }, { 'access-control-allow-origin': '*' });
   }

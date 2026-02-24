@@ -119,6 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			const followUp = data && data.follow_up ? String(data.follow_up).trim() : '';
 			state.lastSearch = data?.search || null;
 			const recos = Array.isArray(data?.recommendations) ? data.recommendations : [];
+			const eduRecos = Array.isArray(data?.edu_recommendations) ? data.edu_recommendations : [];
 
 			let html = escapeHtmlWithBreaks(reply || 'Rozumím.');
 
@@ -137,6 +138,31 @@ document.addEventListener('DOMContentLoaded', () => {
 					if (where) html += `<div style="opacity:.85">${where}</div>`;
 					if (wage) html += `<div style="opacity:.85">${wage}</div>`;
 					if (url) html += `<div style="margin-top:.2rem"><a href="${url}" target="_blank" rel="noopener noreferrer">Otevřít na ÚP</a></div>`;
+					html += '</div>';
+				}
+				html += '</div>';
+			}
+
+			if (eduRecos.length) {
+				html += '<br><br><b>Doporučené školy / obory:</b><br>';
+				html += '<div style="display:grid; gap:.45rem; margin-top:.35rem">';
+				for (const r of eduRecos.slice(0, 5)) {
+					const school = escapeHtml(String(r?.school_name || ''));
+					const place = escapeHtml(String([r?.obec, r?.kraj].filter(Boolean).join(' · ')));
+					const program = escapeHtml(String(r?.program_name || ''));
+					const code = escapeHtml(String(r?.program_code || ''));
+					const forma = escapeHtml(String(r?.forma || ''));
+					const stupen = escapeHtml(String(r?.stupen || ''));
+					const urlRaw = String(r?.url || '').trim();
+					const url = urlRaw && !/^https?:\/\//i.test(urlRaw) ? `https://${urlRaw}` : urlRaw;
+
+					html += '<div style="border:1px solid rgba(255,255,255,.12); padding:.45rem .55rem; border-radius:.6rem">';
+					html += `<div style="font-weight:700">${school || 'Škola'}</div>`;
+					if (place) html += `<div style="opacity:.9">${place}</div>`;
+					if (program) html += `<div style="margin-top:.2rem">${program}${code ? ` <span style=\"opacity:.85\">(${code})</span>` : ''}</div>`;
+					const meta = [stupen, forma].filter(Boolean).join(' · ');
+					if (meta) html += `<div style="opacity:.85">${meta}</div>`;
+					if (url) html += `<div style="margin-top:.2rem"><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Web školy</a></div>`;
 					html += '</div>';
 				}
 				html += '</div>';
