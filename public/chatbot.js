@@ -8,6 +8,11 @@ document.addEventListener("DOMContentLoaded", () => {
 	const chatInput = document.getElementById("chat-input-field");
 	const chatSendButton = document.getElementById("chat-send-btn");
 
+	// If the page doesn't include the chatbot markup, do nothing.
+	if (!chatTrigger || !chatWindow || !chatMessages || !chatInput || !chatSendButton) {
+		return;
+	}
+
     // Paměť pro téma konverzace
     let pendingTopic = null;
 
@@ -87,7 +92,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Pokud jsme našli lokalitu
             if (regionFilter) {
-                const dataSet = DATA[pendingTopic]; // 'auto', 'agri', nebo 'gastro'
+				if (typeof DATA === "undefined" || !DATA) {
+					const topicName = pendingTopic;
+					pendingTopic = null;
+					return `Teď nemám k dispozici datovou sadu nabídek pro obor ${topicName} (na této stránce). Zkuste prosím stránku s tabulkou nabídek nebo vyhledávání pracovních pozic.`;
+				}
+
+				const dataSet = DATA[pendingTopic]; // 'auto', 'agri', nebo 'gastro'
                 let foundJob = null;
 
                 if (regionFilter === 'zahranici_bor') {
