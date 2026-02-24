@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		? advisorRoot.querySelector('[data-role="advisor-send"]')
 		: document.getElementById('chat-send-btn');
 	const statusEl = isEmbedded ? advisorRoot.querySelector('[data-role="advisor-status"]') : null;
+	const embeddedHeaderP = isEmbedded ? advisorRoot.querySelector('.chat-header p') : null;
 
 	// If neither embedded nor floating markup exists, do nothing.
 	if (!chatMessages || !chatInput || !chatSendButton) return;
@@ -48,11 +49,39 @@ document.addEventListener('DOMContentLoaded', () => {
 		state.busy = !!isBusy;
 		chatSendButton.disabled = state.busy;
 		chatInput.disabled = state.busy;
+		if (isEmbedded) {
+			advisorRoot.classList.toggle('is-busy', state.busy);
+			advisorRoot.setAttribute('aria-busy', state.busy ? 'true' : 'false');
+		}
 	};
 
 	const setStatus = (txt) => {
 		if (!statusEl) return;
 		statusEl.textContent = String(txt || '');
+	};
+
+	const applyEmbeddedCopy = () => {
+		if (!isEmbedded) return;
+		const mode = state.mode;
+		const placeholder =
+			mode === 'jobs'
+				? 'Např. "Svářeč, Plzeň, dojezd 20 km, min. 35 000"'
+				: mode === 'edu'
+					? 'Např. "Chci nástavbu na maturitu, jsem z Plzeňska"'
+					: mode === 'courses'
+						? 'Např. "Chci rekvalifikaci, mám čas večer / o víkendu"'
+						: 'Např. "Hledám práci nebo školu – poradíš?"';
+		chatInput.setAttribute('placeholder', placeholder);
+		if (embeddedHeaderP) {
+			embeddedHeaderP.textContent =
+				mode === 'jobs'
+					? 'Popiš praxi a co hledáš. Zeptám se na pár věcí a vyberu nabídky.'
+					: mode === 'edu'
+						? 'Popiš školu/obor a co chceš studovat dál. Doporučím školy a obory.'
+						: mode === 'courses'
+							? 'Popiš cíl a časové možnosti. Doporučím vhodné kurzy / další krok.'
+							: 'Popiš, co řešíš. Pomůžu vybrat nejlepší další krok.';
+		}
 	};
 
 	const buildJobsUrl = (search) => {
@@ -112,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		state.messages.push({ role: 'user', content: messageText });
 
 		setBusy(true);
-		setStatus('Přemýšlím…');
+		setStatus('Přemýšlím');
 		try {
 			const data = await callAI();
 			const reply = String((data && data.reply) || '').trim();
@@ -249,6 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	};
 
 	if (isEmbedded) {
+		applyEmbeddedCopy();
 		advisorRoot.addEventListener('click', (e) => {
 			const t = e.target;
 			if (!(t instanceof Element)) return;
@@ -257,6 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			e.preventDefault();
 			const next = String(btn.getAttribute('data-mode') || 'all').trim();
 			state.mode = next || 'all';
+			applyEmbeddedCopy();
 			advisorRoot
 				.querySelectorAll('[data-role="advisor-mode"]')
 				.forEach((b) => b.classList.toggle('is-active', b === btn));
