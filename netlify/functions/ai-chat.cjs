@@ -1,12 +1,21 @@
 /**
- * Netlify Function: AI chat for job search.
+ * Netlify Function: AI chat for advisor.
  *
- * Env vars:
- * - OPENAI_API_KEY (required)
+ * Provider selection:
+ * - AI_PROVIDER=gemini|openai (optional, default: gemini)
+ *
+ * Gemini (default):
+ * - GEMINI_API_KEY (required)
+ * - GEMINI_MODEL (optional, default: gemini-1.5-flash)
+ *
+ * OpenAI (legacy fallback):
+ * - OPENAI_API_KEY (required when AI_PROVIDER=openai)
  * - OPENAI_MODEL (optional, default: gpt-4o-mini)
  */
 
-const DEFAULT_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+const AI_PROVIDER = (process.env.AI_PROVIDER || 'gemini').trim().toLowerCase();
+const DEFAULT_OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
 
 let OFFERS_CACHE = {
   at: 0,
@@ -296,6 +305,17 @@ function safeParseJson(str) {
   }
 }
 
+function stripJsonFromText(raw) {
+  const s = String(raw || '').trim();
+  if (!s) return '';
+  // Handle ```json ... ``` fences
+  const fenced = s.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  const txt = fenced ? String(fenced[1] || '').trim() : s;
+  // Try to extract the first JSON object if extra text leaked.
+  const firstObj = txt.match(/\{[\s\S]*\}/);
+  return (firstObj ? firstObj[0] : txt).trim();
+}
+
 function clampMessages(raw) {
   const arr = Array.isArray(raw) ? raw : [];
   const out = [];
@@ -327,14 +347,27 @@ exports.handler = async function handler(event) {
     return json(405, { error: 'Method Not Allowed' }, { 'access-control-allow-origin': '*' });
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
+  const openAiKey = process.env.OPENAI_API_KEY;
+  const geminiKey = process.env.GEMINI_API_KEY;
+  const provider = AI_PROVIDER === 'openai' ? 'openai' : 'gemini';
+
+  if (provider === 'openai' && !openAiKey) {
     return json(
       501,
       {
         error: 'AI is not configured (missing OPENAI_API_KEY).',
-        hint:
-          'Set OPENAI_API_KEY in Netlify Site settings → Build & deploy → Environment variables.'
+        hint: 'Set OPENAI_API_KEY in Netlify Site settings → Build & deploy → Environment variables.'
+      },
+      { 'access-control-allow-origin': '*' }
+    );
+  }
+
+  if (provider === 'gemini' && !geminiKey) {
+    return json(
+      501,
+      {
+        error: 'AI is not configured (missing GEMINI_API_KEY).',
+        hint: 'Set GEMINI_API_KEY in Netlify Site settings → Build & deploy → Environment variables.'
       },
       { 'access-control-allow-origin': '*' }
     );
@@ -385,44 +418,91 @@ exports.handler = async function handler(event) {
   const reqMessages = [system, ctxMsg, ...messages];
 
   try {
-    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${apiKey}`,
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: DEFAULT_MODEL,
-        temperature: 0.2,
-        response_format: { type: 'json_object' },
-        messages: reqMessages
-      })
-    });
+    let content = '';
 
-    if (!resp.ok) {
-      const text = await resp.text().catch(() => '');
-      return json(
-        502,
-        {
-          error: 'Upstream AI error.',
-          status: resp.status,
-          details: text.slice(0, 2000)
+    if (provider === 'openai') {
+      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${openAiKey}`,
+          'content-type': 'application/json'
         },
-        { 'access-control-allow-origin': '*' }
-      );
+        body: JSON.stringify({
+          model: DEFAULT_OPENAI_MODEL,
+          temperature: 0.2,
+          response_format: { type: 'json_object' },
+          messages: reqMessages
+        })
+      });
+
+      if (!resp.ok) {
+        const text = await resp.text().catch(() => '');
+        return json(
+          502,
+          {
+            error: 'Upstream AI error.',
+            status: resp.status,
+            details: text.slice(0, 2000)
+          },
+          { 'access-control-allow-origin': '*' }
+        );
+      }
+
+      const data = await resp.json();
+      content =
+        data?.choices?.[0]?.message?.content ||
+        data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments ||
+        '';
+    } else {
+      // Gemini: use systemInstruction + contents, request JSON output.
+      const geminiModel = DEFAULT_GEMINI_MODEL;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+        geminiModel
+      )}:generateContent?key=${encodeURIComponent(geminiKey)}`;
+
+      const systemText = String(system?.content || '') + '\n' + String(ctxMsg?.content || '');
+      const contents = messages.map((m) => ({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: String(m.content || '') }]
+      }));
+
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemText }] },
+          contents,
+          generationConfig: {
+            temperature: 0.2,
+            responseMimeType: 'application/json'
+          }
+        })
+      });
+
+      if (!resp.ok) {
+        const text = await resp.text().catch(() => '');
+        return json(
+          502,
+          {
+            error: 'Upstream AI error.',
+            status: resp.status,
+            details: text.slice(0, 2000)
+          },
+          { 'access-control-allow-origin': '*' }
+        );
+      }
+
+      const data = await resp.json();
+      const parts = data?.candidates?.[0]?.content?.parts;
+      content = Array.isArray(parts) ? parts.map((p) => p?.text || '').join('') : '';
     }
 
-    const data = await resp.json();
-    const content =
-      data?.choices?.[0]?.message?.content ||
-      data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments ||
-      '';
-
-    const outParsed = safeParseJson(content);
+    const jsonText = stripJsonFromText(content);
+    const outParsed = safeParseJson(jsonText);
     if (!outParsed.ok) {
       return json(
         502,
-        { error: 'AI returned non-JSON output.', context: content.slice(0, 500) },
+        { error: 'AI returned non-JSON output.', context: String(content || '').slice(0, 500) },
         { 'access-control-allow-origin': '*' }
       );
     }
