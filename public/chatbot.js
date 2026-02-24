@@ -1,16 +1,29 @@
 document.addEventListener('DOMContentLoaded', () => {
+	const advisorRoot = document.querySelector('[data-role="advisor-root"]');
+	const isEmbedded = !!advisorRoot;
+
 	const chatTrigger = document.getElementById('chat-trigger');
 	const chatWindow = document.getElementById('chat-window');
-	const chatMessages = document.getElementById('chat-messages');
-	const chatInput = document.getElementById('chat-input-field');
-	const chatSendButton = document.getElementById('chat-send-btn');
+	const chatMessages = isEmbedded
+		? advisorRoot.querySelector('[data-role="advisor-messages"]')
+		: document.getElementById('chat-messages');
+	const chatInput = isEmbedded
+		? advisorRoot.querySelector('[data-role="advisor-input"]')
+		: document.getElementById('chat-input-field');
+	const chatSendButton = isEmbedded
+		? advisorRoot.querySelector('[data-role="advisor-send"]')
+		: document.getElementById('chat-send-btn');
+	const statusEl = isEmbedded ? advisorRoot.querySelector('[data-role="advisor-status"]') : null;
 
-	if (!chatTrigger || !chatWindow || !chatMessages || !chatInput || !chatSendButton) return;
+	// If neither embedded nor floating markup exists, do nothing.
+	if (!chatMessages || !chatInput || !chatSendButton) return;
+	if (!isEmbedded && (!chatTrigger || !chatWindow)) return;
 
 	const state = {
 		messages: [],
 		busy: false,
-		lastSearch: null
+		lastSearch: null,
+		mode: 'all'
 	};
 
 	const escapeHtml = (s) =>
@@ -35,6 +48,11 @@ document.addEventListener('DOMContentLoaded', () => {
 		state.busy = !!isBusy;
 		chatSendButton.disabled = state.busy;
 		chatInput.disabled = state.busy;
+	};
+
+	const setStatus = (txt) => {
+		if (!statusEl) return;
+		statusEl.textContent = String(txt || '');
 	};
 
 	const buildJobsUrl = (search) => {
@@ -70,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({
-				mode: 'jobs',
+				mode: state.mode,
 				context: { page },
 				messages: state.messages
 			})
@@ -94,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		state.messages.push({ role: 'user', content: messageText });
 
 		setBusy(true);
+		setStatus('Přemýšlím…');
 		try {
 			const data = await callAI();
 			const reply = String((data && data.reply) || '').trim();
@@ -123,9 +142,25 @@ document.addEventListener('DOMContentLoaded', () => {
 				html += '</div>';
 			}
 
-			if (state.lastSearch && (state.lastSearch.q || state.lastSearch.kraj || state.lastSearch.place)) {
+			const actions = Array.isArray(data?.actions) ? data.actions : [];
+			if (actions.length) {
+				html += '<br><br><div style="display:flex; gap:.5rem; flex-wrap:wrap">';
+				for (const a of actions.slice(0, 4)) {
+					const label = escapeHtml(String(a?.label || 'Otevřít'));
+					const url = String(a?.url || '').trim();
+					if (!url) continue;
+					html += `<a class="btn btn--ghost" href="${escapeHtml(url)}">${label}</a>`;
+				}
+				html += '</div>';
+			}
+
+			if (
+				(state.mode === 'jobs' || state.mode === 'all') &&
+				state.lastSearch &&
+				(state.lastSearch.q || state.lastSearch.kraj || state.lastSearch.place)
+			) {
 				const url = buildJobsUrl(state.lastSearch);
-				html += `<br><br>Odkaz: <a href="${url}">Otevřít vyfiltrované nabídky</a>`;
+				html += `<br><br><a href="${url}">Otevřít vyfiltrované nabídky</a>`;
 			}
 			if (followUp) html += '<br><br>' + escapeHtmlWithBreaks(followUp);
 
@@ -134,20 +169,30 @@ document.addEventListener('DOMContentLoaded', () => {
 		} catch (e) {
 			addMessageToChat(String(e?.message || 'Něco se nepovedlo.'), 'bot');
 		} finally {
+			setStatus('');
 			setBusy(false);
 		}
 	};
 
-	chatTrigger.addEventListener('click', () => {
-		const open = chatWindow.style.display === 'flex';
-		chatWindow.style.display = open ? 'none' : 'flex';
-		if (!open && chatMessages.children.length === 0) {
+	if (!isEmbedded) {
+		chatTrigger.addEventListener('click', () => {
+			const open = chatWindow.style.display === 'flex';
+			chatWindow.style.display = open ? 'none' : 'flex';
+			if (!open && chatMessages.children.length === 0) {
+				addMessageToChat(
+					'Jsem kariérový poradce. Napiš mi co máš vystudováno, co umíš, kde chceš pracovat a jakou mzdu očekáváš. Já z toho vyberu vhodné nabídky.',
+					'bot'
+				);
+			}
+		});
+	} else {
+		if (chatMessages.children.length === 0) {
 			addMessageToChat(
-				'Jsem kariérový poradce. Napiš mi co máš vystudováno, co umíš, kde chceš pracovat a jakou mzdu očekáváš. Já z toho připravím chytré hledání.',
+				'Jsem chytrý poradce. Napiš mi, co řešíš (práce / škola / kurzy) a pár vět o sobě. Začnu otázkami.',
 				'bot'
 			);
 		}
-	});
+	}
 
 	chatSendButton.addEventListener('click', sendMessage);
 	chatInput.addEventListener('keydown', (event) => {
@@ -155,12 +200,14 @@ document.addEventListener('DOMContentLoaded', () => {
 	});
 
 	const openChat = () => {
-		chatWindow.style.display = 'flex';
-		if (chatMessages.children.length === 0) {
-			addMessageToChat(
-				'Jsem kariérový poradce. Napiš mi co máš vystudováno, co umíš, kde chceš pracovat a jakou mzdu očekáváš. Já z toho vyberu vhodné nabídky.',
-				'bot'
-			);
+		if (!isEmbedded) {
+			chatWindow.style.display = 'flex';
+			if (chatMessages.children.length === 0) {
+				addMessageToChat(
+					'Jsem kariérový poradce. Napiš mi co máš vystudováno, co umíš, kde chceš pracovat a jakou mzdu očekáváš. Já z toho vyberu vhodné nabídky.',
+					'bot'
+				);
+			}
 		}
 	};
 
@@ -174,4 +221,20 @@ document.addEventListener('DOMContentLoaded', () => {
 			sendMessage();
 		}
 	};
+
+	if (isEmbedded) {
+		advisorRoot.addEventListener('click', (e) => {
+			const t = e.target;
+			if (!(t instanceof Element)) return;
+			const btn = t.closest('[data-role="advisor-mode"]');
+			if (!btn) return;
+			e.preventDefault();
+			const next = String(btn.getAttribute('data-mode') || 'all').trim();
+			state.mode = next || 'all';
+			advisorRoot
+				.querySelectorAll('[data-role="advisor-mode"]')
+				.forEach((b) => b.classList.toggle('is-active', b === btn));
+			addMessageToChat(`Režim: ${state.mode === 'jobs' ? 'Pracovní nabídky' : state.mode === 'edu' ? 'Vzdělání' : state.mode === 'courses' ? 'Kurzy' : 'Vše'}`, 'bot');
+		});
+	}
 });

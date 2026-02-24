@@ -221,24 +221,25 @@ exports.handler = async function handler(event) {
   }
 
   const body = parsed.value || {};
-  const mode = String(body?.mode || 'jobs').trim();
+  const modeRaw = String(body?.mode || 'all').trim();
+  const mode = ['all', 'jobs', 'edu', 'courses'].includes(modeRaw) ? modeRaw : 'all';
   const context = body?.context && typeof body.context === 'object' ? body.context : {};
   const messages = clampMessages(body?.messages);
 
   const system = {
     role: 'system',
     content:
-      'Jsi kariérový poradce a asistent pro vyhledávání práce v ČR. ' +
-      'Cíl: z textu uživatele vytěžit informace o vzdělání, zkušenostech, dovednostech a preferencích a převést je na parametry vyhledávání práce. ' +
+      'Jsi chytrý kariérový poradce pro web SŠ Bor. ' +
+      'Režimy: all (vše dohromady), jobs (pracovní nabídky), edu (vzdělání), courses (kurzy). ' +
+      'Cíl: z textu uživatele vytěžit informace o vzdělání, zkušenostech, dovednostech a preferencích. ' +
       'Vždy se snaž 1–2 doplňujícími otázkami upřesnit: lokalitu (město/kraj), dojezd, očekávanou mzdu, typ úvazku a relevantní praxi. ' +
-      'Nepřepínej stránku ani neříkej, že se má uživatel někam prokliknout; jen konverzuj. ' +
+      'Důležité: nepřepínej stránku ani nenařizuj proklik; jen konverzuj a doptávej se. ' +
       'Vždy odpovídej ČESKY. ' +
       'V odpovědi vrať POUZE JSON objekt (bez markdownu). ' +
       'Drž se schématu: ' +
-      '{"reply":string,"profile":{...},"search":{...},"follow_up":string|null}. ' +
-      'Pole search: {"q":string,"kraj":string|null,"place":string|null,"minMzda":number|null,"dojezdKm":number|null}. ' +
-      'kraj používej jako kód NUTS3 (např. CZ032) nebo null. ' +
-      'Pokud si nejsi jistý lokalitou, nech place/kraj null a zeptej se ve follow_up.'
+      '{"reply":string,"profile":{...},"search":{"q":string,"kraj":string|null,"place":string|null,"minMzda":number|null,"dojezdKm":number|null},"follow_up":string|null}. ' +
+      'Pro režim jobs se snaž vyplnit search.q (klíčová slova) a případně search.kraj/place/minMzda/dojezdKm. ' +
+      'Pro edu/courses může být search.q prázdné. '
   };
 
   const ctxMsg = {
@@ -248,7 +249,7 @@ exports.handler = async function handler(event) {
         mode,
         page: String(context?.page || ''),
         built_at: String(context?.built_at || ''),
-        note: 'Parametry hledání se použijí na stránce prace.html.'
+        note: 'search parametry se používají pro prace.html (jobs).'
       },
       null,
       0
@@ -302,15 +303,45 @@ exports.handler = async function handler(event) {
 
     const out = outParsed.value || {};
     let recommendations = [];
+    let actions = [];
     try {
       const cache = await loadOffersFromSite(event);
       const offers = Array.isArray(cache?.offers) ? cache.offers : [];
-      if (offers.length && out?.search) recommendations = recommendOffers(offers, out.search);
+      if (mode === 'jobs' && offers.length && out?.search) recommendations = recommendOffers(offers, out.search);
     } catch {
       // ignore recommendations errors
     }
 
-    return json(200, { ...out, recommendations }, { 'access-control-allow-origin': '*' });
+    const followUpTxt = String(out?.follow_up || '').trim();
+    const hasAnySearch =
+      !!out?.search &&
+      (String(out.search.q || '').trim() ||
+        String(out.search.kraj || '').trim() ||
+        String(out.search.place || '').trim() ||
+        (out.search.minMzda != null && Number(out.search.minMzda) > 0) ||
+        (out.search.dojezdKm != null && Number(out.search.dojezdKm) > 0));
+
+    // UX: show redirect actions only once the assistant is not asking more questions.
+    const okToShowActions = !followUpTxt && (mode !== 'jobs' || hasAnySearch);
+
+    if (okToShowActions) {
+      if (mode === 'edu') {
+        actions = [{ label: 'Otevřít vzdělání', url: 'vzdelani.html' }];
+      } else if (mode === 'courses') {
+        actions = [{ label: 'Otevřít kurzy', url: 'kurzy.html' }];
+      } else if (mode === 'jobs') {
+        actions = [{ label: 'Otevřít pracovní nabídky', url: 'prace.html#hledani' }];
+      } else {
+        // all
+        actions = [
+          { label: 'Pracovní nabídky', url: 'prace.html#hledani' },
+          { label: 'Vzdělání', url: 'vzdelani.html' },
+          { label: 'Kurzy', url: 'kurzy.html' }
+        ];
+      }
+    }
+
+    return json(200, { ...out, mode, recommendations, actions }, { 'access-control-allow-origin': '*' });
   } catch (e) {
     return json(500, { error: 'Server error.', details: String(e?.message || e) }, { 'access-control-allow-origin': '*' });
   }

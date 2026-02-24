@@ -53,6 +53,35 @@
 	z-index: 9999;
 }
 
+/* --- Embedded advisor (index.html) --- */
+.advisor-mode-row{
+	display:flex;
+	gap:.5rem;
+	flex-wrap:wrap;
+	align-items:center;
+}
+.advisor-mode{
+	box-shadow:none;
+}
+.advisor-mode.is-active{
+	background: rgba(0, 123, 255, 0.12);
+	border-color: rgba(0, 123, 255, 0.35);
+}
+
+.advisor-chat{
+	width: 100%;
+	background-color: var(--color-background);
+	border-radius: 15px;
+	box-shadow: 0 5px 20px rgba(0, 0, 0, 0.12);
+	overflow: hidden;
+	border: 1px solid rgba(0, 123, 255, 0.18);
+}
+
+.advisor-chat .chat-messages{
+	min-height: 300px;
+	max-height: 420px;
+}
+
 /* 3. Hlavička chatu (s titulkem a logem) */
 .chat-header {
 	padding: 20px;
