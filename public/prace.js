@@ -604,7 +604,7 @@
   }
 
   function offerComparableDateKey(offer) {
-    const raw = String(offer?.datum_vlozeni || offer?.datum || '').trim();
+    const raw = String(offer?.datum_vlozeni || '').trim();
     if (!raw) return 0;
 
     // ISO-ish: YYYY-M-D or YYYY-MM-DD (optionally with time)
@@ -868,7 +868,7 @@
         const krajCode = String(j.kraj || '').trim();
         const krajShort = CZ_REGION_SHORT_BY_CODE[krajCode] || CZ_REGION_NAME_BY_CODE[krajCode] || '';
         const mz = offerWageText(j);
-        const dt = formatOfferDate(j.datum_vlozeni || j.datum);
+        const dt = formatOfferDate(j.datum_vlozeni);
         const canDetail = !!offerDetailUrl(j);
 
         return `
