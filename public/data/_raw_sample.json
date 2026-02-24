@@ -1,36 +1,36 @@
 [
   {
-    "portalId": 67230918,
-    "id": "VolneMisto/67230918",
-    "referencniCislo": "32625520776",
+    "portalId": 67183555,
+    "id": "VolneMisto/67183555",
+    "referencniCislo": "31757880705",
     "azylant": false,
-    "cizinecMimoEu": false,
-    "datumVlozeni": "2026-02-16T00:00:00.000Z",
-    "datumZmeny": "2026-02-17T00:06:51.000Z",
+    "cizinecMimoEu": true,
+    "datumVlozeni": "2025-08-18T00:00:00.000Z",
+    "datumZmeny": "2026-02-19T23:29:08.000Z",
     "mesicniMzdaDo": null,
-    "mesicniMzdaOd": 30000,
+    "mesicniMzdaOd": 35000,
     "modraKarta": false,
-    "pocetHodinTydne": 38.75,
-    "pocetMist": 1,
+    "pocetHodinTydne": null,
+    "pocetMist": 5,
     "pozadovanaProfese": {
-      "cs": "Chovatel hospodářských zvířat (m/ž)"
+      "cs": "Kuchař, pizzař (M/Ž)"
     },
     "statniSpravaSamosprava": false,
-    "terminUkonceniPracovnihoPomeru": "2028-02-28",
-    "terminZahajeniPracovnihoPomeru": "2026-03-01",
+    "terminUkonceniPracovnihoPomeru": null,
+    "terminZahajeniPracovnihoPomeru": "2025-08-20",
     "souhlasAgenturyAgentura": false,
     "souhlasAgenturyUzivatel": false,
     "upresnujiciInformace": {
-      "cs": "První kontakt e-mailem nebo telefonicky.\n\nKrátkodobé zaměstnání."
+      "cs": "Místo výkonu práce: Barcalova č.p. 142, 562 01  Ústí nad Orlicí 1\nZnalost balkánské kuchyně výhodou, řidičský průkaz sk. B výhodou.\nKontakt: telefonicky Bytyqi Sali, tel.: 773 166 998"
     },
     "urlAdresa": null,
-    "zamestnaneckaKarta": false,
-    "expirace": "2026-04-03",
+    "zamestnaneckaKarta": true,
+    "expirace": null,
     "minPozadovaneVzdelani": {
       "id": "VzdelaniDetailniKategorie/zaklPraktSkol"
     },
     "smennost": {
-      "id": "Smennost/dvouSm"
+      "id": "Smennost/jednoSm"
     },
     "typMzdy": {
       "id": "TypMzdy/mesic"
@@ -48,44 +48,44 @@
       "pracoviste": [
         {
           "email": null,
-          "nazev": "GenAgro Říčany, a.s. - 01",
+          "nazev": "Sali Bytyqi - provozovna Ústí nad Orlicí",
           "telefon": null,
           "adresa": {
-            "cisloDomovni": 458,
+            "cisloDomovni": 142,
             "cisloOrientacni": null,
             "dodatekAdresy": null,
-            "kodAdresnihoMista": 13246011,
-            "psc": "66482",
+            "kodAdresnihoMista": 24737194,
+            "psc": "56201",
             "typCislaDomovniho": {
               "id": "TypStavebnihoObjektu/1"
             },
             "kraj": {
-              "id": "Kraj/116"
+              "id": "Kraj/94"
             },
             "okres": {
-              "id": "Okres/3703"
+              "id": "Okres/3611"
             },
             "obec": {
-              "id": "Obec/583839"
+              "id": "Obec/579891"
             },
             "mestskyObvodMestskaCast": null,
             "mestskyObvodVPraze": null,
             "castObce": {
-              "id": "CastObce/145548"
+              "id": "CastObce/411361"
             },
             "ulice": {
-              "nazev": "Zemědělská"
+              "nazev": "Barcalova"
             }
           }
         }
       ]
     },
     "zamestnavatel": {
-      "ico": "64506843",
-      "nazev": "GenAgro Říčany, a.s."
+      "ico": "01217305",
+      "nazev": "Sali Bytyqi"
     },
     "profeseCzIsco": {
-      "id": "CzIsco/61213"
+      "id": "CzIsco/51201"
     },
     "pracovnePravniVztahy": [
       {
@@ -98,7 +98,7 @@
       }
     ],
     "kontaktniPracoviste": {
-      "id": "KontaktniPracoviste/BOA"
+      "id": "KontaktniPracoviste/UOA"
     },
     "vyhodyVolnehoMista": null,
     "pozadovanaDovednost": null,
@@ -107,44 +107,44 @@
     "pozadovaneVzdelani": null,
     "prvniKontaktSeZamestnavatelem": {
       "komuSeHlasit": {
-        "email": "studeny@genagro.cz",
-        "telefon": "546 427 316",
-        "jmeno": "Stanislav",
-        "prijmeni": "Studený",
-        "titulPredJmenem": "Ing.",
+        "email": "salva@post.cz",
+        "telefon": "773 166 998",
+        "jmeno": "Sali",
+        "prijmeni": "Bytyqi",
+        "titulPredJmenem": null,
         "titulZaJmenem": null,
         "poziceVeSpolecnosti": null
       },
       "kdeSeHlasit": {
         "email": null,
         "telefon": null,
-        "mistoKontaktu": "GenAgro Říčany, a.s. - 01",
+        "mistoKontaktu": "Sali Bytyqi - provozovna Ústí nad Orlicí",
         "adresa": {
-          "cisloDomovni": 458,
+          "cisloDomovni": 142,
           "cisloOrientacni": null,
-          "dodatekAdresy": "Zemědělská č.p. 458, Říčany u Brna 664 82",
-          "kodAdresnihoMista": 13246011,
-          "psc": "66482",
+          "dodatekAdresy": null,
+          "kodAdresnihoMista": 24737194,
+          "psc": "56201",
           "typCislaDomovniho": {
             "id": "TypStavebnihoObjektu/1"
           },
           "kraj": {
-            "id": "Kraj/116"
+            "id": "Kraj/94"
           },
           "okres": {
-            "id": "Okres/3703"
+            "id": "Okres/3611"
           },
           "obec": {
-            "id": "Obec/583839"
+            "id": "Obec/579891"
           },
           "mestskyObvodMestskaCast": null,
           "mestskyObvodVPraze": null,
           "castObce": {
-            "id": "CastObce/145548"
+            "id": "CastObce/411361"
           },
           "nazevCastiObce": null,
           "ulice": {
-            "nazev": "Zemědělská"
+            "nazev": "Barcalova"
           }
         }
       }

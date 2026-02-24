@@ -756,6 +756,18 @@
   }
 
   async function loadMpsvOffers() {
+    // Prefer a single lightweight file with all offers (if available)
+    try {
+      const all = await fetchJSON('data/all_min.json');
+      const offers = Array.isArray(all?.offers) ? all.offers : [];
+      if (offers.length) {
+        const mapped = offers.map((o) => ({ ...o, __tag: 'all', __tagLabel: 'Vše' }));
+        return { offers: mapped, tags: [{ tag: 'all', label: 'Vše' }] };
+      }
+    } catch {
+      // ignore, fallback to categories
+    }
+
     let cats = null;
     try {
       cats = await fetchJSON('data/categories.json');

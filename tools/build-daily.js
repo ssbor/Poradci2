@@ -583,8 +583,39 @@ async function main() {
   const employers = Object.fromEntries(tags.map(t => [t, {}]));
   const sample = [];
   const rawSample = [];
+  const allMin = [];
+
+  function pickMin(norm) {
+    return {
+      kraj: String(norm?.kraj || ''),
+      kraj_nazev: String(norm?.kraj_nazev || ''),
+      okres: String(norm?.okres || ''),
+      obec: String(norm?.obec || ''),
+      lokalita: String(norm?.lokalita || ''),
+      profese: String(norm?.profese || ''),
+      cz_isco_code: String(norm?.cz_isco_code || ''),
+      cz_isco: String(norm?.cz_isco || ''),
+      zamestnavatel: String(norm?.zamestnavatel || ''),
+      zamestnavatel_ico: String(norm?.zamestnavatel_ico || ''),
+      mzda_od: norm?.mzda_od != null ? Number(norm.mzda_od) : null,
+      mzda_do: norm?.mzda_do != null ? Number(norm.mzda_do) : null,
+      datum_vlozeni: String(norm?.datum_vlozeni || ''),
+      datum_zmeny: String(norm?.datum_zmeny || ''),
+      datum: String(norm?.datum || ''),
+      portal_id: norm?.portal_id != null ? Number(norm.portal_id) : null,
+      referencni_cislo: String(norm?.referencni_cislo || ''),
+      url_adresa: String(norm?.url_adresa || ''),
+      uvazek_ids: Array.isArray(norm?.uvazek_ids) ? norm.uvazek_ids : [],
+      smennost_id: String(norm?.smennost_id || ''),
+      typ_mzdy_id: String(norm?.typ_mzdy_id || ''),
+      vzdelani_id: String(norm?.vzdelani_id || '')
+    };
+  }
 
   function ingest(norm) {
+    // Always add to the all-offers lightweight index
+    allMin.push(pickMin(norm));
+
     const cat = classifyByRules({
       czIscostring: norm.cz_isco,
       profese: norm.profese,
@@ -618,6 +649,16 @@ async function main() {
   ensureOutDir();
   fs.writeFileSync(`${OUTDIR}/_sample.json`, JSON.stringify(sample, null, 2));
   fs.writeFileSync(`${OUTDIR}/_raw_sample.json`, JSON.stringify(rawSample, null, 2));
+
+  fs.writeFileSync(
+    `${OUTDIR}/all_min.json`,
+    JSON.stringify({
+      source: SOURCE_URL,
+      built_at: new Date().toISOString(),
+      count: allMin.length,
+      offers: allMin
+    })
+  );
 
   // Manifest of available categories for the frontend (index / generic obor page)
   const categoriesManifest = {
