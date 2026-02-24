@@ -11,22 +11,14 @@ document.addEventListener('DOMContentLoaded', () => {
     statusEl.textContent = String(txt || '');
   };
 
-  const buildJobsUrl = (search) => {
-    const params = new URLSearchParams();
-    const q = String((search && search.q) || '').trim();
-    const kraj = String((search && search.kraj) || '').trim();
-    const place = String((search && search.place) || '').trim();
-    const minMzda = Number((search && search.minMzda) || 0) || 0;
-    const dojezdKm = Number((search && search.dojezdKm) || 0) || 0;
-
-    if (q) params.set('q', q);
-    if (kraj) params.set('kraj', kraj);
-    if (place) params.set('place', place);
-    if (minMzda) params.set('min', String(Math.round(minMzda)));
-    if (dojezdKm) params.set('km', String(Math.round(dojezdKm)));
-
-    const qs = params.toString();
-    return 'prace.html' + (qs ? '?' + qs : '') + '#hledani';
+  const sendToChatbot = (text) => {
+    const bot = window.JobBot;
+    if (bot && typeof bot.open === 'function' && typeof bot.send === 'function') {
+      bot.open();
+      bot.send(text);
+      return true;
+    }
+    return false;
   };
 
   form.addEventListener('submit', async (e) => {
@@ -38,33 +30,18 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    setStatus('Přemýšlím…');
+    setStatus('Otevírám chat…');
     if (btnEl) btnEl.disabled = true;
 
-    try {
-      const resp = await fetch('/.netlify/functions/ai-chat', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          mode: 'jobs',
-          context: { page: 'index' },
-          messages: [{ role: 'user', content: text }]
-        })
-      });
-
-      const data = await resp.json().catch(() => null);
-      if (!resp.ok) {
-        const msg = String(data?.error || 'AI služba není dostupná.');
-        setStatus(msg);
-        return;
-      }
-
-      const url = buildJobsUrl(data?.search);
-      window.location.href = url;
-    } catch {
-      setStatus('Nepodařilo se spojit s AI službou.');
-    } finally {
+    const ok = sendToChatbot(text);
+    if (ok) {
+      if (inputEl) inputEl.value = '';
+      setStatus('');
       if (btnEl) btnEl.disabled = false;
+      return;
     }
+
+    setStatus('Chatbot není na stránce dostupný.');
+    if (btnEl) btnEl.disabled = false;
   });
 });

@@ -8,6 +8,149 @@
 
 const DEFAULT_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
+let OFFERS_CACHE = {
+  at: 0,
+  built_at: '',
+  offers: null
+};
+
+function normalizeText(s) {
+  return String(s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}+/gu, '')
+    .replace(/[^a-z0-9\s,.-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function tokensFromQuery(q) {
+  const t = normalizeText(q)
+    .split(/[\s,]+/g)
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .filter((x) => x.length >= 2);
+  return Array.from(new Set(t)).slice(0, 12);
+}
+
+function comparableDateKey(raw) {
+  const s = String(raw || '').trim();
+  if (!s) return 0;
+  const d = new Date(s);
+  const n = d.getTime();
+  return Number.isFinite(n) ? n : 0;
+}
+
+function offerText(o) {
+  return normalizeText(
+    [
+      o?.profese,
+      o?.zamestnavatel,
+      o?.obec,
+      o?.okres,
+      o?.lokalita,
+      o?.kraj_nazev,
+      o?.cz_isco,
+      o?.cz_isco_code
+    ]
+      .filter(Boolean)
+      .join(' | ')
+  );
+}
+
+function offerDetailUrl(o) {
+  const direct = String(o?.url_adresa ?? o?.urlAdresa ?? o?.url ?? o?.detail_url ?? '').trim();
+  if (/^https?:\/\//i.test(direct)) return direct;
+  const pidRaw = o?.portal_id ?? o?.portalId;
+  const pid = pidRaw == null ? '' : String(pidRaw).trim();
+  if (pid) return `https://www.uradprace.cz/volna-mista-v-cr#/volna-mista-detail/${encodeURIComponent(pid)}`;
+  return '';
+}
+
+function mzdaText(o) {
+  const a = o?.mzda_od != null ? Number(o.mzda_od) : null;
+  const b = o?.mzda_do != null ? Number(o.mzda_do) : null;
+  if (Number.isFinite(a) && Number.isFinite(b) && a && b) return `${Math.round(a)}–${Math.round(b)} Kč`;
+  if (Number.isFinite(a) && a) return `od ${Math.round(a)} Kč`;
+  if (Number.isFinite(b) && b) return `do ${Math.round(b)} Kč`;
+  return '';
+}
+
+async function loadOffersFromSite(event) {
+  const now = Date.now();
+  if (OFFERS_CACHE.offers && now - OFFERS_CACHE.at < 10 * 60 * 1000) return OFFERS_CACHE;
+
+  const proto = String(event?.headers?.['x-forwarded-proto'] || 'https');
+  const host = String(event?.headers?.host || '').trim();
+  if (!host) return OFFERS_CACHE;
+  const base = `${proto}://${host}`;
+
+  const resp = await fetch(`${base}/data/all_min.json`, {
+    headers: { 'cache-control': 'no-cache' }
+  });
+  if (!resp.ok) return OFFERS_CACHE;
+  const data = await resp.json();
+  const offers = Array.isArray(data?.offers) ? data.offers : [];
+  OFFERS_CACHE = {
+    at: now,
+    built_at: String(data?.built_at || ''),
+    offers
+  };
+  return OFFERS_CACHE;
+}
+
+function recommendOffers(offers, search) {
+  const q = String(search?.q || '').trim();
+  const kraj = String(search?.kraj || '').trim();
+  const minMzda = search?.minMzda != null ? Number(search.minMzda) : 0;
+  const tokens = tokensFromQuery(q);
+
+  const out = [];
+  for (const o of offers) {
+    if (kraj && String(o?.kraj || '').trim() !== kraj) continue;
+
+    if (minMzda) {
+      const a = o?.mzda_od != null ? Number(o.mzda_od) : null;
+      const b = o?.mzda_do != null ? Number(o.mzda_do) : null;
+      const ok = (Number.isFinite(a) && a >= minMzda) || (Number.isFinite(b) && b >= minMzda);
+      if (!ok) continue;
+    }
+
+    const txt = offerText(o);
+    let score = 0;
+    for (const t of tokens) {
+      if (txt.includes(t)) score += 6;
+    }
+
+    const title = normalizeText(o?.profese || '');
+    for (const t of tokens) {
+      if (title && title.includes(t)) score += 6;
+    }
+
+    const a = o?.mzda_od != null ? Number(o.mzda_od) : null;
+    if (Number.isFinite(a) && a) score += 2;
+
+    if (comparableDateKey(o?.datum_zmeny || o?.datum_vlozeni)) score += 1;
+
+    if (score <= 0) continue;
+    out.push({ o, score });
+  }
+
+  out.sort((x, y) => y.score - x.score || comparableDateKey(y.o?.datum_zmeny) - comparableDateKey(x.o?.datum_zmeny));
+  return out.slice(0, 5).map(({ o }) => ({
+    profese: String(o?.profese || ''),
+    zamestnavatel: String(o?.zamestnavatel || ''),
+    obec: String(o?.obec || ''),
+    lokalita: String(o?.lokalita || ''),
+    kraj: String(o?.kraj || ''),
+    mzda_od: o?.mzda_od ?? null,
+    mzda_do: o?.mzda_do ?? null,
+    mzda_text: mzdaText(o),
+    portal_id: o?.portal_id ?? null,
+    url_adresa: offerDetailUrl(o)
+  }));
+}
+
 function json(statusCode, body, extraHeaders = {}) {
   return {
     statusCode,
@@ -87,6 +230,8 @@ exports.handler = async function handler(event) {
     content:
       'Jsi kariérový poradce a asistent pro vyhledávání práce v ČR. ' +
       'Cíl: z textu uživatele vytěžit informace o vzdělání, zkušenostech, dovednostech a preferencích a převést je na parametry vyhledávání práce. ' +
+      'Vždy se snaž 1–2 doplňujícími otázkami upřesnit: lokalitu (město/kraj), dojezd, očekávanou mzdu, typ úvazku a relevantní praxi. ' +
+      'Nepřepínej stránku ani neříkej, že se má uživatel někam prokliknout; jen konverzuj. ' +
       'Vždy odpovídej ČESKY. ' +
       'V odpovědi vrať POUZE JSON objekt (bez markdownu). ' +
       'Drž se schématu: ' +
@@ -155,7 +300,17 @@ exports.handler = async function handler(event) {
       );
     }
 
-    return json(200, outParsed.value, { 'access-control-allow-origin': '*' });
+    const out = outParsed.value || {};
+    let recommendations = [];
+    try {
+      const cache = await loadOffersFromSite(event);
+      const offers = Array.isArray(cache?.offers) ? cache.offers : [];
+      if (offers.length && out?.search) recommendations = recommendOffers(offers, out.search);
+    } catch {
+      // ignore recommendations errors
+    }
+
+    return json(200, { ...out, recommendations }, { 'access-control-allow-origin': '*' });
   } catch (e) {
     return json(500, { error: 'Server error.', details: String(e?.message || e) }, { 'access-control-allow-origin': '*' });
   }
