@@ -587,7 +587,7 @@
     if (!s) return '—';
 
     // Prefer stable parsing for YYYY-MM-DD
-    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
     if (m) {
       const y = Number(m[1]);
       const mo = Number(m[2]);
@@ -601,6 +601,31 @@
     const dt = new Date(s);
     if (!Number.isFinite(dt.getTime())) return '—';
     return dt.toLocaleDateString('cs-CZ');
+  }
+
+  function offerComparableDateKey(offer) {
+    const raw = String(offer?.datum_vlozeni || offer?.datum || '').trim();
+    if (!raw) return 0;
+
+    // ISO-ish: YYYY-M-D or YYYY-MM-DD (optionally with time)
+    const iso = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (iso) {
+      const y = Number(iso[1]);
+      const m = Number(iso[2]);
+      const d = Number(iso[3]);
+      if (y > 1900 && m >= 1 && m <= 12 && d >= 1 && d <= 31) return y * 10000 + m * 100 + d;
+    }
+
+    // CZ: D.M.YYYY or DD.MM.YYYY
+    const cz = raw.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+    if (cz) {
+      const d = Number(cz[1]);
+      const m = Number(cz[2]);
+      const y = Number(cz[3]);
+      if (y > 1900 && m >= 1 && m <= 12 && d >= 1 && d <= 31) return y * 10000 + m * 100 + d;
+    }
+
+    return 0;
   }
 
   // Focus/certifications by broad category (heuristic).
@@ -1544,9 +1569,9 @@
       }
 
       withKm.sort((a, b) => {
-        const ad = String(a?.datum_vlozeni || a?.datum || '');
-        const bd = String(b?.datum_vlozeni || b?.datum || '');
-        if (bd !== ad) return bd.localeCompare(ad);
+        const ak = offerComparableDateKey(a);
+        const bk = offerComparableDateKey(b);
+        if (bk !== ak) return bk - ak;
         return String(a?.profese || '').localeCompare(String(b?.profese || ''), 'cs');
       });
 
