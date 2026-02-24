@@ -34,10 +34,9 @@
         <div class="hero-grid">
           <div>
             <h1>Vyhledávání pracovních pozic</h1>
-            <p>Vyber školu/obor a případné zaměření (certifikace). Pak si vyfiltruješ pozice podle kraje, mzdy a dojezdu (km) od mojí polohy.</p>
+            <p>Vyhledej pozice podle klíčových slov a vyfiltruj je podle kraje, mzdy a dojezdu (km) od mojí polohy.</p>
             <ul class="checklist">
               <li>„Automechanik, Plzeň“ i obráceně</li>
-              <li>Moje škola → nabídne její obory</li>
               <li>Filtry: kraj, minimální mzda, dojezd</li>
             </ul>
             <div class="hero-actions">
@@ -53,34 +52,10 @@
     </section>
 
     <section class="section" id="hledani">
-      <h2 class="section-title">Můj profil + filtr práce</h2>
+      <h2 class="section-title">Filtr práce</h2>
 
       <div class="card" style="margin-top: 1rem">
         <form data-role="jobs-form" class="grid" style="gap: .6rem">
-          <div class="col-12">
-            <div class="jobs-profile-row" aria-label="Můj profil">
-              <div class="field jobs-school">
-                <label class="field__label" for="jobs-school">Moje škola (volitelné)</label>
-                <input id="jobs-school" class="input" data-role="jobs-school" placeholder="Začni psát (např. Střední škola Bor)…" autocomplete="off" />
-                <div class="jobs-suggest" data-role="jobs-school-suggest" aria-label="Návrhy škol"></div>
-              </div>
-
-              <div class="field jobs-program">
-                <label class="field__label" for="jobs-program">Můj obor (volitelné)</label>
-                <select id="jobs-program" class="select" data-role="jobs-program" aria-label="Obor">
-                  <option value="">—</option>
-                </select>
-              </div>
-
-              <div class="field jobs-focus">
-                <label class="field__label" for="jobs-focus">Zaměření / certifikace</label>
-                <select id="jobs-focus" class="select" data-role="jobs-focus" aria-label="Zaměření">
-                  <option value="">Bez zaměření</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
           <div class="col-12">
             <div class="jobs-search-row" aria-label="Vyhledávání a filtry">
               <div class="field jobs-q">
@@ -121,15 +96,6 @@
         </form>
       </div>
 
-      <div class="card" style="margin-top: 1rem">
-        <div class="programs-head" style="margin-top:0">
-          <div class="programs-head__title">Doporučené pozice podle profilu</div>
-          <div class="programs-head__col">Poznámka</div>
-          <div class="programs-head__col">&nbsp;</div>
-        </div>
-        <div class="jobs-reco" data-role="jobs-reco"></div>
-      </div>
-
       <div data-role="jobs-results" style="margin-top: 1rem"></div>
     </section>
 
@@ -161,7 +127,7 @@
       </div>
     </div>
 
-  <script src="prace.js?v=20260224-3"></script>
-  <script src="chatbot.js?v=20260224-1"></script>
+  <script src="prace.js?v=20260224-4"></script>
+  <script src="chatbot.js?v=20260224-2"></script>
 </body>
 </html>

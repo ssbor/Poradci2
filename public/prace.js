@@ -1417,48 +1417,51 @@
     let selectedCategory = 'other';
     let selectedPlace = null;
 
-    const sugg = initSchoolSuggest({
-      inputEl: schoolEl,
-      suggestEl: schoolSuggestEl,
-      onPick(picked) {
-        selectedSchool = picked;
-        if (schoolEl) schoolEl.value = picked.name;
+    // Optional: profile-based school/program/focus (can be removed from the HTML).
+    if (schoolEl && schoolSuggestEl && programEl && focusEl) {
+      const sugg = initSchoolSuggest({
+        inputEl: schoolEl,
+        suggestEl: schoolSuggestEl,
+        onPick(picked) {
+          selectedSchool = picked;
+          if (schoolEl) schoolEl.value = picked.name;
 
-        const programs = (picked.programs || []).map((p) => ({
-          value: String(p.code || p.name || ''),
-          label: String(p.name || p.code || '—'),
-          __name: String(p.name || '')
-        }));
+          const programs = (picked.programs || []).map((p) => ({
+            value: String(p.code || p.name || ''),
+            label: String(p.name || p.code || '—'),
+            __name: String(p.name || '')
+          }));
 
-        populateSelect(programEl, programs, { emptyLabel: 'Vyber obor…' });
-        selectedCategory = 'other';
-        populateSelect(focusEl, (FOCUS_BY_CATEGORY.other || []).map((x) => ({ value: x.id, label: x.label })), {
-          emptyLabel: 'Bez zaměření'
-        });
+          populateSelect(programEl, programs, { emptyLabel: 'Vyber obor…' });
+          selectedCategory = 'other';
+          populateSelect(focusEl, (FOCUS_BY_CATEGORY.other || []).map((x) => ({ value: x.id, label: x.label })), {
+            emptyLabel: 'Bez zaměření'
+          });
 
-        run();
+          runSearch({ resetPage: true });
+        }
+      });
+
+      statusEl.textContent = 'Načítám databázi škol…';
+
+      let schoolIndex = null;
+      try {
+        schoolIndex = await fetchJSON('data/skoly_index.json');
+      } catch {
+        statusEl.textContent = 'Nepodařilo se načíst data škol (doporučení oborů bude omezené).';
       }
-    });
 
-    statusEl.textContent = 'Načítám databázi škol…';
+      const schools = Array.isArray(schoolIndex?.schools) ? schoolIndex.schools : [];
+      sugg.setItems(
+        schools.map((s) => {
+          const a = s?.adresa || {};
+          const place = [a.obec, a.okres, a.kraj].filter(Boolean).join(' · ');
+          return { ...s, place };
+        })
+      );
 
-    let schoolIndex = null;
-    try {
-      schoolIndex = await fetchJSON('data/skoly_index.json');
-    } catch {
-      statusEl.textContent = 'Nepodařilo se načíst data škol (doporučení oborů bude omezené).';
+      if (statusEl.textContent.startsWith('Načítám')) statusEl.textContent = '';
     }
-
-    const schools = Array.isArray(schoolIndex?.schools) ? schoolIndex.schools : [];
-    sugg.setItems(
-      schools.map((s) => {
-        const a = s?.adresa || {};
-        const place = [a.obec, a.okres, a.kraj].filter(Boolean).join(' · ');
-        return { ...s, place };
-      })
-    );
-
-    if (statusEl.textContent.startsWith('Načítám')) statusEl.textContent = '';
 
     // Populate kraj select
     populateSelect(
@@ -1504,6 +1507,10 @@
     }
 
     function updateCategoryAndFocus() {
+      if (!programEl || !focusEl) {
+        selectedCategory = 'other';
+        return;
+      }
       const selected = String(programEl?.value || '');
       const programName =
         (selectedSchool?.programs || []).find((p) => String(p.code || p.name || '') === selected)?.name || '';
@@ -1517,6 +1524,24 @@
 
     let runSeq = 0;
     const offerCoordsCache = new Map();
+
+    function applyUrlPrefill() {
+      const params = new URLSearchParams(String(window.location.search || ''));
+      const q = String(params.get('q') || '').trim();
+      const kraj = String(params.get('kraj') || '').trim();
+      const place = String(params.get('place') || '').trim();
+      const min = String(params.get('min') || '').trim();
+      const km = String(params.get('km') || '').trim();
+
+      if (q && qEl) qEl.value = q;
+      if (kraj && krajEl) krajEl.value = kraj;
+      if (place && placeEl) {
+        placeEl.value = place;
+        selectedPlace = null;
+      }
+      if (min && minEl) minEl.value = min;
+      if (km && dojezdEl) dojezdEl.value = km;
+    }
 
     async function distanceKmForOffer(offer, originPoint) {
       const obec = String(offer?.obec || '').trim();
@@ -1539,8 +1564,8 @@
     async function runSearch({ resetPage = false } = {}) {
       const seq = ++runSeq;
       const focusId = String(focusEl?.value || '').trim();
-      const roles = recommendedRoles({ category: selectedCategory, focusId });
-      renderReco(recoEl, roles);
+      const roles = recoEl ? recommendedRoles({ category: selectedCategory, focusId }) : [];
+      if (recoEl) renderReco(recoEl, roles);
 
       const query = String(qEl?.value || '').trim();
       const minWage = Number(minEl?.value || 0) || 0;
@@ -1690,17 +1715,19 @@
       if (minEl) minEl.value = '';
       if (dojezdEl) dojezdEl.value = '';
 
-      populateSelect(programEl, [], { emptyLabel: '—' });
-      populateSelect(focusEl, [], { emptyLabel: 'Bez zaměření' });
+      if (programEl) populateSelect(programEl, [], { emptyLabel: '—' });
+      if (focusEl) populateSelect(focusEl, [], { emptyLabel: 'Bez zaměření' });
 
       state.page = 1;
       runSearch({ resetPage: true });
     });
 
     // Initial state
-    populateSelect(programEl, [], { emptyLabel: '—' });
-    populateSelect(focusEl, [], { emptyLabel: 'Bez zaměření' });
-    renderReco(recoEl, []);
+    if (programEl) populateSelect(programEl, [], { emptyLabel: '—' });
+    if (focusEl) populateSelect(focusEl, [], { emptyLabel: 'Bez zaměření' });
+    if (recoEl) renderReco(recoEl, []);
+
+    applyUrlPrefill();
     runSearch({ resetPage: true });
   }
 

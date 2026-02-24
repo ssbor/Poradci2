@@ -1,0 +1,162 @@
+/**
+ * Netlify Function: AI chat for job search.
+ *
+ * Env vars:
+ * - OPENAI_API_KEY (required)
+ * - OPENAI_MODEL (optional, default: gpt-4o-mini)
+ */
+
+const DEFAULT_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+
+function json(statusCode, body, extraHeaders = {}) {
+  return {
+    statusCode,
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
+      ...extraHeaders
+    },
+    body: JSON.stringify(body)
+  };
+}
+
+function safeParseJson(str) {
+  try {
+    return { ok: true, value: JSON.parse(str) };
+  } catch (e) {
+    return { ok: false, error: String(e?.message || e) };
+  }
+}
+
+function clampMessages(raw) {
+  const arr = Array.isArray(raw) ? raw : [];
+  const out = [];
+  for (const m of arr.slice(-20)) {
+    const role = String(m?.role || '').trim();
+    const content = String(m?.content || '').trim();
+    if (!content) continue;
+    if (role !== 'user' && role !== 'assistant' && role !== 'system') continue;
+    out.push({ role, content });
+  }
+  return out;
+}
+
+exports.handler = async function handler(event) {
+  // CORS / preflight
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 204,
+      headers: {
+        'access-control-allow-origin': '*',
+        'access-control-allow-methods': 'POST, OPTIONS',
+        'access-control-allow-headers': 'content-type'
+      },
+      body: ''
+    };
+  }
+
+  if (event.httpMethod !== 'POST') {
+    return json(405, { error: 'Method Not Allowed' }, { 'access-control-allow-origin': '*' });
+  }
+
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    return json(
+      501,
+      {
+        error: 'AI is not configured (missing OPENAI_API_KEY).',
+        hint:
+          'Set OPENAI_API_KEY in Netlify Site settings → Build & deploy → Environment variables.'
+      },
+      { 'access-control-allow-origin': '*' }
+    );
+  }
+
+  const parsed = safeParseJson(event.body || '{}');
+  if (!parsed.ok) {
+    return json(400, { error: 'Invalid JSON body.' }, { 'access-control-allow-origin': '*' });
+  }
+
+  const body = parsed.value || {};
+  const mode = String(body?.mode || 'jobs').trim();
+  const context = body?.context && typeof body.context === 'object' ? body.context : {};
+  const messages = clampMessages(body?.messages);
+
+  const system = {
+    role: 'system',
+    content:
+      'Jsi kariérový poradce a asistent pro vyhledávání práce v ČR. ' +
+      'Cíl: z textu uživatele vytěžit informace o vzdělání, zkušenostech, dovednostech a preferencích a převést je na parametry vyhledávání práce. ' +
+      'Vždy odpovídej ČESKY. ' +
+      'V odpovědi vrať POUZE JSON objekt (bez markdownu). ' +
+      'Drž se schématu: ' +
+      '{"reply":string,"profile":{...},"search":{...},"follow_up":string|null}. ' +
+      'Pole search: {"q":string,"kraj":string|null,"place":string|null,"minMzda":number|null,"dojezdKm":number|null}. ' +
+      'kraj používej jako kód NUTS3 (např. CZ032) nebo null. ' +
+      'Pokud si nejsi jistý lokalitou, nech place/kraj null a zeptej se ve follow_up.'
+  };
+
+  const ctxMsg = {
+    role: 'system',
+    content: `Kontext stránky: ${JSON.stringify(
+      {
+        mode,
+        page: String(context?.page || ''),
+        built_at: String(context?.built_at || ''),
+        note: 'Parametry hledání se použijí na stránce prace.html.'
+      },
+      null,
+      0
+    )}`
+  };
+
+  const reqMessages = [system, ctxMsg, ...messages];
+
+  try {
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${apiKey}`,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: DEFAULT_MODEL,
+        temperature: 0.2,
+        response_format: { type: 'json_object' },
+        messages: reqMessages
+      })
+    });
+
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => '');
+      return json(
+        502,
+        {
+          error: 'Upstream AI error.',
+          status: resp.status,
+          details: text.slice(0, 2000)
+        },
+        { 'access-control-allow-origin': '*' }
+      );
+    }
+
+    const data = await resp.json();
+    const content =
+      data?.choices?.[0]?.message?.content ||
+      data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments ||
+      '';
+
+    const outParsed = safeParseJson(content);
+    if (!outParsed.ok) {
+      return json(
+        502,
+        { error: 'AI returned non-JSON output.', context: content.slice(0, 500) },
+        { 'access-control-allow-origin': '*' }
+      );
+    }
+
+    return json(200, outParsed.value, { 'access-control-allow-origin': '*' });
+  } catch (e) {
+    return json(500, { error: 'Server error.', details: String(e?.message || e) }, { 'access-control-allow-origin': '*' });
+  }
+};

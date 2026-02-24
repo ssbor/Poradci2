@@ -21,6 +21,15 @@ npm run build    # vytvoří public/data/*.json
 npm start        # http://localhost:8000
 ```
 
+## AI chatbot + chytré hledání práce (Netlify)
+AI běží serverově přes Netlify Function, aby nebyl vidět API klíč v prohlížeči.
+
+- Endpoint: `/.netlify/functions/ai-chat`
+- Povinné env: `OPENAI_API_KEY`
+- Volitelné env: `OPENAI_MODEL` (default je `gpt-4o-mini`)
+
+Na Netlify nastavte proměnné v **Site settings → Build & deploy → Environment variables**.
+
 ## Úprava kategorií (filtrování profesí)
 Upravte soubor `tools/mpsv-categories.json`:
 - `isco_prefixes` – seznam prefixů CZ-ISCO (matchuje se podle začátku čísel)
