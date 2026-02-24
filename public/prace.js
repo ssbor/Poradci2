@@ -357,7 +357,7 @@
     const typMzdyHuman = humanizeEnumId(typMzdyId, TYP_MZDY_LABELS);
     const pocetMist = offer?.pocet_mist != null ? String(offer.pocet_mist) : '';
     const hodinyTydne = offer?.hodiny_tydne != null ? String(offer.hodiny_tydne) : '';
-    const datumVlozeni = String(offer?.datum_vlozeni || '').trim();
+    const datumVlozeni = offerPostingDateRaw(offer);
 
     m.titleEl.textContent = title;
     m.subtitleEl.textContent = [company, city, krajName].filter(Boolean).join(' · ');
@@ -603,12 +603,16 @@
     return dt.toLocaleDateString('cs-CZ');
   }
 
-  function offerComparableDateKey(offer) {
-    const raw = String(offer?.datum_vlozeni || '').trim();
-    if (!raw) return 0;
+  function formatUpdatedAt(isoDateTime) {
+    return formatOfferDate(isoDateTime);
+  }
+
+  function dateKeyFromRaw(raw) {
+    const s = String(raw || '').trim();
+    if (!s) return 0;
 
     // ISO-ish: YYYY-M-D or YYYY-MM-DD (optionally with time)
-    const iso = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
     if (iso) {
       const y = Number(iso[1]);
       const m = Number(iso[2]);
@@ -617,7 +621,7 @@
     }
 
     // CZ: D.M.YYYY or DD.MM.YYYY
-    const cz = raw.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+    const cz = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
     if (cz) {
       const d = Number(cz[1]);
       const m = Number(cz[2]);
@@ -626,6 +630,35 @@
     }
 
     return 0;
+  }
+
+  function dayKeyPlus(days) {
+    const dt = new Date();
+    dt.setHours(12, 0, 0, 0);
+    dt.setDate(dt.getDate() + Number(days || 0));
+    return dt.getFullYear() * 10000 + (dt.getMonth() + 1) * 100 + dt.getDate();
+  }
+
+  function offerPostingDateRaw(offer) {
+    const dv = String(offer?.datum_vlozeni || '').trim();
+    const dz = String(offer?.datum_zmeny || offer?.datum || '').trim();
+
+    const dvKey = dateKeyFromRaw(dv);
+    const dzKey = dateKeyFromRaw(dz);
+    const futureLimitKey = dayKeyPlus(1); // allow small timezone skew
+
+    const dvOk = dvKey > 0 && dvKey <= futureLimitKey;
+    const dzOk = dzKey > 0 && dzKey <= futureLimitKey;
+
+    if (dvOk) return dv;
+    if (dzOk) return dz;
+
+    // If both look invalid (including absurd future dates), return whatever exists.
+    return dv || dz || '';
+  }
+
+  function offerComparableDateKey(offer) {
+    return dateKeyFromRaw(offerPostingDateRaw(offer));
   }
 
   // Focus/certifications by broad category (heuristic).
@@ -787,7 +820,11 @@
       const offers = Array.isArray(all?.offers) ? all.offers : [];
       if (offers.length) {
         const mapped = offers.map((o) => ({ ...o, __tag: 'all', __tagLabel: 'Vše' }));
-        return { offers: mapped, tags: [{ tag: 'all', label: 'Vše' }] };
+        return {
+          offers: mapped,
+          tags: [{ tag: 'all', label: 'Vše' }],
+          built_at: String(all?.built_at || '')
+        };
       }
     } catch {
       // ignore, fallback to categories
@@ -830,7 +867,11 @@
     for (const r of results) {
       if (r.status === 'fulfilled') all.push(...r.value);
     }
-    return { offers: all, tags: tagList };
+    return {
+      offers: all,
+      tags: tagList,
+      built_at: String(cats?.built_at || '')
+    };
   }
 
   function renderReco(recoEl, roles) {
@@ -868,7 +909,7 @@
         const krajCode = String(j.kraj || '').trim();
         const krajShort = CZ_REGION_SHORT_BY_CODE[krajCode] || CZ_REGION_NAME_BY_CODE[krajCode] || '';
         const mz = offerWageText(j);
-        const dt = formatOfferDate(j.datum_vlozeni);
+        const dt = formatOfferDate(offerPostingDateRaw(j));
         const canDetail = !!offerDetailUrl(j);
 
         return `
@@ -928,7 +969,10 @@
           ? `
         <div class="pager__right" style="align-items:flex-start">
           <div style="display:flex; flex-direction:column; align-items:flex-end; gap:.35rem">
-            <div class="count-pill">Pozice: <b data-role="jobs-count">–</b></div>
+            <div style="display:flex; align-items:baseline; justify-content:flex-end; gap:.6rem; flex-wrap:wrap">
+              <div class="muted" style="font-size:.82em">Aktualizováno: <span data-role="jobs-updated">–</span></div>
+              <div class="count-pill">Pozice: <b data-role="jobs-count">–</b></div>
+            </div>
             <div style="display:flex; align-items:center; gap:.5rem">
               <span class="pager__label">Na stránce</span>
               <select class="select" data-role="jobs-page-size" aria-label="Počet nabídek na stránce">
@@ -1279,7 +1323,8 @@
 
     const state = {
       page: 1,
-      pageSize: 30
+      pageSize: 30,
+      dataUpdatedAt: ''
     };
 
     let lastResults = [];
@@ -1303,6 +1348,10 @@
       outEl
         ?.querySelectorAll('[data-role=jobs-count]')
         .forEach((el) => (el.textContent = String(hits.length)));
+
+      outEl
+        ?.querySelectorAll('[data-role=jobs-updated]')
+        .forEach((el) => (el.textContent = formatUpdatedAt(state.dataUpdatedAt)));
 
       renderJobs(listEl, pageHits);
 
@@ -1436,11 +1485,13 @@
       const loaded = await loadMpsvOffers();
       allJobs = loaded.offers || [];
       tagList = loaded.tags || [];
+      state.dataUpdatedAt = String(loaded?.built_at || '');
       statusEl.textContent = '';
     } catch {
       statusEl.textContent = 'Nepodařilo se načíst volná místa (MPSV).';
       allJobs = [];
       tagList = [];
+      state.dataUpdatedAt = '';
     }
 
     // Load place suggest list
