@@ -142,8 +142,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		const data = await resp.json().catch(() => null);
 		if (!resp.ok) {
-			const msg = String(data?.error || 'AI služba není dostupná.');
-			throw new Error(msg);
+			const base = String(data?.error || 'AI služba není dostupná.');
+			const status = data?.status != null ? ` (HTTP ${String(data.status)})` : '';
+			const detailsRaw = String(data?.details || '').trim();
+			const details = detailsRaw ? `: ${detailsRaw.replace(/\s+/g, ' ').slice(0, 260)}` : '';
+			const hintRaw = String(data?.hint || '').trim();
+			const hint = hintRaw ? `\n${hintRaw}` : '';
+			throw new Error(`${base}${status}${details}${hint}`);
 		}
 		return data;
 	};

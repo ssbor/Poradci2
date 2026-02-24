@@ -356,6 +356,8 @@ exports.handler = async function handler(event) {
       501,
       {
         error: 'AI is not configured (missing OPENAI_API_KEY).',
+        provider,
+        model: DEFAULT_OPENAI_MODEL,
         hint: 'Set OPENAI_API_KEY in Netlify Site settings → Build & deploy → Environment variables.'
       },
       { 'access-control-allow-origin': '*' }
@@ -367,6 +369,8 @@ exports.handler = async function handler(event) {
       501,
       {
         error: 'AI is not configured (missing GEMINI_API_KEY).',
+        provider,
+        model: DEFAULT_GEMINI_MODEL,
         hint: 'Set GEMINI_API_KEY in Netlify Site settings → Build & deploy → Environment variables.'
       },
       { 'access-control-allow-origin': '*' }
@@ -442,6 +446,8 @@ exports.handler = async function handler(event) {
           {
             error: 'Upstream AI error.',
             status: resp.status,
+            provider,
+            model: DEFAULT_OPENAI_MODEL,
             details: text.slice(0, 2000)
           },
           { 'access-control-allow-origin': '*' }
@@ -486,6 +492,8 @@ exports.handler = async function handler(event) {
           {
             error: 'Upstream AI error.',
             status: resp.status,
+            provider,
+            model: geminiModel,
             details: text.slice(0, 2000)
           },
           { 'access-control-allow-origin': '*' }
