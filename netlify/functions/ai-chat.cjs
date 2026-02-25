@@ -8,6 +8,9 @@
  * - GEMINI_API_KEY (required)
  * - GEMINI_MODEL (optional, default: gemini-2.5-flash)
  *
+ * Prompt tuning:
+ * - ADVISOR_STYLE (optional) appended to system instructions
+ *
  * OpenAI (legacy fallback):
  * - OPENAI_API_KEY (required when AI_PROVIDER=openai)
  * - OPENAI_MODEL (optional, default: gpt-4o-mini)
@@ -16,6 +19,7 @@
 const AI_PROVIDER = (process.env.AI_PROVIDER || 'gemini').trim().toLowerCase();
 const DEFAULT_OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const ADVISOR_STYLE = String(process.env.ADVISOR_STYLE || '').trim();
 
 let OFFERS_CACHE = {
   at: 0,
@@ -415,8 +419,9 @@ exports.handler = async function handler(event) {
       'Vždy odpovídej ČESKY. ' +
       'V odpovědi vrať POUZE JSON objekt (bez markdownu). ' +
       'Drž se schématu: ' +
-      '{"reply":string,"profile":{...},"search":{"q":string,"kraj":string|null,"place":string|null,"minMzda":number|null,"dojezdKm":number|null},"follow_up":string|null}. ' +
-      'V edu/courses můžeš použít search.q pro klíčová slova (obor/škola/kraj/forma), i když nejde o práci.'
+        '{"reply":string,"profile":{...},"search":{"q":string,"kraj":string|null,"place":string|null,"minMzda":number|null,"dojezdKm":number|null},"follow_up":string|null}. ' +
+        'V edu/courses můžeš použít search.q pro klíčová slova (obor/škola/kraj/forma), i když nejde o práci.' +
+        (ADVISOR_STYLE ? `\n\nDOPLŇUJÍCÍ INSTRUKCE (ADVISOR_STYLE):\n${ADVISOR_STYLE}` : '')
   };
 
   const ctxMsg = {
