@@ -67,6 +67,103 @@
 		linear-gradient(180deg, rgba(255,255,255,.70) 0%, rgba(255,255,255,.92) 100%);
 }
 
+.advisor-shell{
+	display: flex;
+	gap: .9rem;
+}
+
+.advisor-sidebar{
+	width: 240px;
+	flex: 0 0 240px;
+	padding: .75rem;
+	border-radius: 16px;
+	border: 1px solid rgba(0,0,0,.07);
+	background: rgba(255,255,255,.60);
+	backdrop-filter: blur(10px);
+}
+
+.advisor-sidebar-title{
+	font-weight: 900;
+	letter-spacing: .2px;
+	color: rgba(14,26,43,.86);
+	margin-bottom: .55rem;
+}
+
+.advisor-history{
+	display: grid;
+	gap: .45rem;
+}
+
+.advisor-history-item{
+	appearance: none;
+	width: 100%;
+	text-align: left;
+	border: 1px solid rgba(0,0,0,.08);
+	background: rgba(255,255,255,.72);
+	border-radius: 14px;
+	padding: .6rem .65rem;
+	cursor: pointer;
+	box-shadow: 0 10px 20px rgba(6,30,77,.06);
+}
+
+.advisor-history-item:hover{
+	background: rgba(255,255,255,.92);
+}
+
+.advisor-history-item.is-active{
+	border-color: rgba(0,123,255,.22);
+	box-shadow: 0 0 0 4px rgba(0,123,255,.10), 0 10px 20px rgba(6,30,77,.06);
+}
+
+.advisor-history-title{
+	font-weight: 850;
+	color: rgba(14,26,43,.92);
+	font-size: 13px;
+	line-height: 1.15;
+}
+
+.advisor-history-meta{
+	margin-top: .25rem;
+	font-size: 12px;
+	color: rgba(14,26,43,.65);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: .5rem;
+}
+
+.advisor-history-chip{
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: .15rem .45rem;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 900;
+	border: 1px solid rgba(0,0,0,.08);
+	background: rgba(255,255,255,.85);
+	color: rgba(14,26,43,.78);
+}
+
+.advisor-history-delete{
+	appearance: none;
+	border: 1px solid rgba(0,0,0,.08);
+	background: rgba(255,255,255,.65);
+	border-radius: 10px;
+	padding: .2rem .45rem;
+	cursor: pointer;
+	color: rgba(14,26,43,.72);
+}
+
+.advisor-history-delete:hover{
+	background: rgba(255,255,255,.92);
+}
+
+.advisor-main{
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
 .advisor-mode-row{
 	display:flex;
 	gap:.4rem;
@@ -314,6 +411,19 @@
 	}
 	.advisor-mode-row::-webkit-scrollbar{ display:none; }
 	.advisor-mode{ white-space: nowrap; }
+	.advisor-shell{ flex-direction: column; }
+	.advisor-sidebar{
+		width: 100%;
+		flex: 0 0 auto;
+	}
+	.advisor-history{
+		grid-auto-flow: column;
+		overflow-x: auto;
+		grid-auto-columns: minmax(210px, 1fr);
+		padding-bottom: .1rem;
+		scrollbar-width: none;
+	}
+	.advisor-history::-webkit-scrollbar{ display:none; }
 }
 
 /* 3. Hlavička chatu (s titulkem a logem) */

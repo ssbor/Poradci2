@@ -18,23 +18,210 @@ document.addEventListener('DOMContentLoaded', () => {
 	const embeddedModeBadge = isEmbedded ? advisorRoot.querySelector('[data-role="advisor-mode-badge"]') : null;
 	const embeddedResetBtn = isEmbedded ? advisorRoot.querySelector('[data-role="advisor-reset"]') : null;
 	const embeddedStarters = isEmbedded ? advisorRoot.querySelector('[data-role="advisor-starters"]') : null;
+	const embeddedHistory = isEmbedded ? advisorRoot.querySelector('[data-role="advisor-history"]') : null;
 
 	// If neither embedded nor floating markup exists, do nothing.
 	if (!chatMessages || !chatInput || !chatSendButton) return;
 	if (!isEmbedded && (!chatTrigger || !chatWindow)) return;
 
 	const state = {
-		messages: [],
 		busy: false,
+		// Floating chatbot uses single-thread state.
+		messages: [],
 		lastSearch: null,
-		mode: 'all'
+		mode: 'all',
+		// Embedded advisor uses sessions.
+		sessions: [],
+		activeSessionId: null
 	};
 
 	const MODE_STORAGE_KEY = 'advisor_mode_v1';
+	const SESSIONS_STORAGE_KEY = 'advisor_sessions_v1';
+	const MAX_SESSIONS = 25;
+	const MAX_SESSION_MESSAGES = 40;
 
 	const normalizeMode = (raw) => {
 		const m = String(raw || '').trim();
 		return ['all', 'jobs', 'edu', 'courses'].includes(m) ? m : 'all';
+	};
+
+	const modeLabel = (mode) =>
+		mode === 'jobs' ? 'Práce' : mode === 'edu' ? 'Vzdělání' : mode === 'courses' ? 'Kurzy' : 'Vše';
+
+	const nowTs = () => Date.now();
+
+	const makeId = () => {
+		const a = Math.random().toString(36).slice(2, 10);
+		return `s_${Date.now().toString(36)}_${a}`;
+	};
+
+	const shortTime = (ts) => {
+		try {
+			return new Date(ts).toLocaleString('cs-CZ', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+		} catch {
+			return '';
+		}
+	};
+
+	const getActiveSession = () => {
+		if (!isEmbedded) return null;
+		const id = state.activeSessionId;
+		return state.sessions.find((s) => s && s.id === id) || null;
+	};
+
+	const getMode = () => {
+		if (!isEmbedded) return state.mode;
+		return normalizeMode(getActiveSession()?.mode || 'all');
+	};
+
+	const getMessagesForRequest = () => {
+		const arr = isEmbedded ? getActiveSession()?.messages || [] : state.messages;
+		// Send only role/content to backend (avoid local render fields).
+		return arr.map((m) => ({ role: m.role, content: m.content }));
+	};
+
+	const clampSessionMessages = (messages) => {
+		const arr = Array.isArray(messages) ? messages : [];
+		return arr.slice(-MAX_SESSION_MESSAGES);
+	};
+
+	const saveSessions = () => {
+		if (!isEmbedded) return;
+		try {
+			const payload = {
+				activeSessionId: state.activeSessionId,
+				sessions: state.sessions.slice(-MAX_SESSIONS)
+			};
+			localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(payload));
+		} catch {
+			// ignore storage errors
+		}
+	};
+
+	const loadSessions = () => {
+		if (!isEmbedded) return;
+		try {
+			const raw = localStorage.getItem(SESSIONS_STORAGE_KEY);
+			if (!raw) return;
+			const parsed = JSON.parse(raw);
+			const sessions = Array.isArray(parsed?.sessions) ? parsed.sessions : [];
+			state.sessions = sessions
+				.map((s) => ({
+					id: String(s?.id || ''),
+					mode: normalizeMode(s?.mode || 'all'),
+					title: String(s?.title || ''),
+					createdAt: Number(s?.createdAt || 0) || 0,
+					updatedAt: Number(s?.updatedAt || 0) || 0,
+					messages: clampSessionMessages(Array.isArray(s?.messages) ? s.messages : []).map((m) => ({
+						role: String(m?.role || ''),
+						content: String(m?.content || ''),
+						render_html: m?.render_html ? String(m.render_html) : ''
+					}))
+				}))
+				.filter((s) => s.id);
+			state.activeSessionId = String(parsed?.activeSessionId || '') || (state.sessions[0]?.id || null);
+		} catch {
+			// ignore
+		}
+	};
+
+	const guessTitleFromMessages = (session) => {
+		const msgs = Array.isArray(session?.messages) ? session.messages : [];
+		const firstUser = msgs.find((m) => m && m.role === 'user' && String(m.content || '').trim());
+		const txt = String(firstUser?.content || '').trim();
+		if (!txt) return '';
+		return txt.length > 42 ? txt.slice(0, 42).trim() + '…' : txt;
+	};
+
+	const createSession = (mode, { seedWelcome = true } = {}) => {
+		if (!isEmbedded) return null;
+		const ts = nowTs();
+		const session = {
+			id: makeId(),
+			mode: normalizeMode(mode),
+			title: '',
+			createdAt: ts,
+			updatedAt: ts,
+			messages: []
+		};
+		if (seedWelcome) {
+			session.messages.push({ role: 'assistant', content: welcomeMessageForMode(session.mode), render_html: '' });
+		}
+		state.sessions = [session, ...state.sessions].slice(0, MAX_SESSIONS);
+		state.activeSessionId = session.id;
+		try {
+			localStorage.setItem(MODE_STORAGE_KEY, session.mode);
+		} catch {
+			// ignore
+		}
+		saveSessions();
+		return session;
+	};
+
+	const deleteSession = (id) => {
+		if (!isEmbedded) return;
+		const before = state.sessions.length;
+		state.sessions = state.sessions.filter((s) => s && s.id !== id);
+		if (state.sessions.length === before) return;
+		if (state.activeSessionId === id) state.activeSessionId = state.sessions[0]?.id || null;
+		if (!state.activeSessionId) createSession('all');
+		saveSessions();
+	};
+
+	const renderHistory = () => {
+		if (!isEmbedded || !embeddedHistory) return;
+		const active = state.activeSessionId;
+		const rows = state.sessions.slice(0, MAX_SESSIONS).map((s) => {
+			const title = String(s?.title || '').trim() || guessTitleFromMessages(s) || `${modeLabel(s?.mode)} · ${shortTime(s?.createdAt || 0)}`;
+			const meta = `${shortTime(s?.updatedAt || s?.createdAt || 0)}`;
+			const chip = modeLabel(s?.mode);
+			const isActive = s?.id === active;
+			return `
+				<button type="button" class="advisor-history-item ${isActive ? 'is-active' : ''}" data-role="advisor-history-item" data-id="${escapeHtml(
+					String(s?.id || '')
+				)}">
+					<div class="advisor-history-title">${escapeHtml(title)}</div>
+					<div class="advisor-history-meta">
+						<span class="advisor-history-chip">${escapeHtml(chip)}</span>
+						<span style="opacity:.85">${escapeHtml(meta)}</span>
+						<button type="button" class="advisor-history-delete" data-role="advisor-history-delete" data-id="${escapeHtml(
+							String(s?.id || '')
+						)}" aria-label="Smazat chat">×</button>
+					</div>
+				</button>`;
+		});
+		embeddedHistory.innerHTML = rows.join('') || '<div class="muted">Zatím tu nic není.</div>';
+	};
+
+	const renderActiveChat = () => {
+		if (!isEmbedded) return;
+		const s = getActiveSession();
+		if (!s) return;
+		if (chatMessages) chatMessages.innerHTML = '';
+		for (const m of Array.isArray(s.messages) ? s.messages : []) {
+			if (!m) continue;
+			const sender = m.role === 'user' ? 'user' : 'bot';
+			const html = sender === 'bot' && m.render_html ? m.render_html : '';
+			addMessageToChat(html || m.content, sender, { html: !!html });
+		}
+	};
+
+	const setActiveSession = (id) => {
+		if (!isEmbedded) return;
+		const s = state.sessions.find((x) => x && x.id === id);
+		if (!s) return;
+		state.activeSessionId = s.id;
+		try {
+			localStorage.setItem(MODE_STORAGE_KEY, s.mode);
+		} catch {
+			// ignore
+		}
+		applyEmbeddedCopy();
+		setActiveModeButton(s.mode);
+		renderStarters();
+		renderHistory();
+		renderActiveChat();
+		saveSessions();
 	};
 
 	const welcomeMessageForMode = (mode) => {
@@ -61,7 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	const renderStarters = () => {
 		if (!isEmbedded || !embeddedStarters) return;
-		const mode = state.mode;
+		const mode = getMode();
 		const starters =
 			mode === 'jobs'
 				? [
@@ -98,10 +285,17 @@ document.addEventListener('DOMContentLoaded', () => {
 	};
 
 	const resetChat = () => {
-		state.messages = [];
-		state.lastSearch = null;
-		if (chatMessages) chatMessages.innerHTML = '';
-		addMessageToChat(welcomeMessageForMode(state.mode), 'bot');
+		if (!isEmbedded) {
+			state.messages = [];
+			state.lastSearch = null;
+			if (chatMessages) chatMessages.innerHTML = '';
+			addMessageToChat(welcomeMessageForMode(state.mode), 'bot');
+			return;
+		}
+		// Embedded: start a NEW session (keep history).
+		const mode = getMode();
+		createSession(mode);
+		setActiveSession(state.activeSessionId);
 	};
 
 	const escapeHtml = (s) =>
@@ -139,7 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	const applyEmbeddedCopy = () => {
 		if (!isEmbedded) return;
-		const mode = state.mode;
+		const mode = getMode();
 
 		if (embeddedModeBadge) {
 			const label =
@@ -212,9 +406,9 @@ document.addEventListener('DOMContentLoaded', () => {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({
-				mode: state.mode,
+				mode: getMode(),
 				context: { page },
-				messages: state.messages
+				messages: getMessagesForRequest()
 			})
 		});
 
@@ -250,10 +444,26 @@ document.addEventListener('DOMContentLoaded', () => {
 		const messageText = String(chatInput.value || '').trim();
 		if (!messageText) return;
 		if (state.busy) return;
+		if (isEmbedded && !getActiveSession()) {
+			createSession('all');
+		}
 
 		addMessageToChat(messageText, 'user');
 		chatInput.value = '';
-		state.messages.push({ role: 'user', content: messageText });
+		if (isEmbedded) {
+			const s = getActiveSession();
+			if (s) {
+				s.messages = clampSessionMessages([...(s.messages || []), { role: 'user', content: messageText, render_html: '' }]);
+				s.updatedAt = nowTs();
+				if (!String(s.title || '').trim()) {
+					s.title = guessTitleFromMessages(s);
+				}
+				saveSessions();
+				renderHistory();
+			}
+		} else {
+			state.messages.push({ role: 'user', content: messageText });
+		}
 
 		setBusy(true);
 		setStatus('Přemýšlím');
@@ -339,7 +549,23 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (followUp) html += '<br><br>' + escapeHtmlWithBreaks(followUp);
 
 			addMessageToChat(html, 'bot', { html: true });
-			state.messages.push({ role: 'assistant', content: reply || '' });
+			if (isEmbedded) {
+				const s = getActiveSession();
+				if (s) {
+					s.messages = clampSessionMessages([
+						...(s.messages || []),
+						{ role: 'assistant', content: reply || '', render_html: html }
+					]);
+					s.updatedAt = nowTs();
+					if (!String(s.title || '').trim()) {
+						s.title = guessTitleFromMessages(s);
+					}
+					saveSessions();
+					renderHistory();
+				}
+			} else {
+				state.messages.push({ role: 'assistant', content: reply || '' });
+			}
 		} catch (e) {
 			addMessageToChat(String(e?.message || 'Něco se nepovedlo.'), 'bot');
 		} finally {
@@ -360,19 +586,20 @@ document.addEventListener('DOMContentLoaded', () => {
 			}
 		});
 	} else {
-		// Restore last mode for embedded advisor.
-		try {
-			const saved = localStorage.getItem(MODE_STORAGE_KEY);
-			state.mode = normalizeMode(saved || state.mode);
-		} catch {
-			// ignore storage errors
+		// Embedded advisor: load sessions + restore last used mode.
+		loadSessions();
+		if (!state.sessions.length) {
+			let startMode = 'all';
+			try {
+				const saved = localStorage.getItem(MODE_STORAGE_KEY);
+				startMode = normalizeMode(saved || startMode);
+			} catch {
+				// ignore
+			}
+			createSession(startMode);
 		}
-
-		setActiveModeButton(state.mode);
-
-		if (chatMessages.children.length === 0) {
-			addMessageToChat(welcomeMessageForMode(state.mode), 'bot');
-		}
+		if (!state.activeSessionId) state.activeSessionId = state.sessions[0]?.id || null;
+		setActiveSession(state.activeSessionId);
 	}
 
 	chatSendButton.addEventListener('click', sendMessage);
@@ -405,8 +632,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	if (isEmbedded) {
 		applyEmbeddedCopy();
-		setActiveModeButton(state.mode);
+		setActiveModeButton(getMode());
 		renderStarters();
+		renderHistory();
+		renderActiveChat();
 
 		if (embeddedResetBtn) {
 			embeddedResetBtn.addEventListener('click', (e) => {
@@ -432,18 +661,37 @@ document.addEventListener('DOMContentLoaded', () => {
 		advisorRoot.addEventListener('click', (e) => {
 			const t = e.target;
 			if (!(t instanceof Element)) return;
+
+			const del = t.closest('[data-role="advisor-history-delete"]');
+			if (del) {
+				e.preventDefault();
+				const id = String(del.getAttribute('data-id') || '').trim();
+				if (id) {
+					deleteSession(id);
+					renderHistory();
+					renderActiveChat();
+					applyEmbeddedCopy();
+					setActiveModeButton(getMode());
+					renderStarters();
+				}
+				return;
+			}
+
+			const item = t.closest('[data-role="advisor-history-item"]');
+			if (item && embeddedHistory && embeddedHistory.contains(item)) {
+				e.preventDefault();
+				const id = String(item.getAttribute('data-id') || '').trim();
+				if (id) setActiveSession(id);
+				return;
+			}
+
 			const btn = t.closest('[data-role="advisor-mode"]');
 			if (!btn) return;
 			e.preventDefault();
 			const next = normalizeMode(btn.getAttribute('data-mode') || 'all');
-			state.mode = next;
-			try {
-				localStorage.setItem(MODE_STORAGE_KEY, state.mode);
-			} catch {
-				// ignore storage errors
-			}
-			applyEmbeddedCopy();
-			setActiveModeButton(state.mode);
+			// Clicking a focus creates a NEW chat "tab" (keeps history like Gemini).
+			createSession(next);
+			setActiveSession(state.activeSessionId);
 		});
 
 		advisorRoot.addEventListener('keydown', (e) => {

@@ -115,33 +115,42 @@
     <p class="section-sub">Napiš mi, co řešíš. Budu se doptávat a pak ti doporučím další krok (práce / vzdělání / kurzy) a u práce i konkrétní nabídky.</p>
 
     <div class="card advisor-card" data-role="advisor-root" style="margin-top: 1rem">
-      <div class="advisor-mode-row" data-role="advisor-mode-group" role="tablist" aria-label="Zaměření poradce">
-        <button class="btn btn--ghost advisor-mode is-active" type="button" data-role="advisor-mode" data-mode="all" role="tab" aria-selected="true">Vše</button>
-        <button class="btn btn--ghost advisor-mode" type="button" data-role="advisor-mode" data-mode="jobs" role="tab" aria-selected="false">Práce</button>
-        <button class="btn btn--ghost advisor-mode" type="button" data-role="advisor-mode" data-mode="edu" role="tab" aria-selected="false">Vzdělání</button>
-        <button class="btn btn--ghost advisor-mode" type="button" data-role="advisor-mode" data-mode="courses" role="tab" aria-selected="false">Kurzy</button>
-      </div>
+      <div class="advisor-shell">
+        <aside class="advisor-sidebar" aria-label="Historie chatů">
+          <div class="advisor-sidebar-title">Historie</div>
+          <div class="advisor-history" data-role="advisor-history" aria-label="Seznam chatů"></div>
+        </aside>
 
-      <div class="advisor-starters" data-role="advisor-starters" aria-label="Rychlé dotazy"></div>
-
-      <div class="advisor-chat" aria-label="Chat poradce">
-        <div class="chat-header">
-          <div class="advisor-header-row">
-            <h3>Kariérový poradce <span class="advisor-mode-badge" data-role="advisor-mode-badge" aria-live="polite">Vše</span></h3>
-            <button class="advisor-reset" type="button" data-role="advisor-reset" aria-label="Nový chat">Nový chat</button>
+        <div class="advisor-main">
+          <div class="advisor-mode-row" data-role="advisor-mode-group" role="tablist" aria-label="Zaměření poradce">
+            <button class="btn btn--ghost advisor-mode is-active" type="button" data-role="advisor-mode" data-mode="all" role="tab" aria-selected="true">Vše</button>
+            <button class="btn btn--ghost advisor-mode" type="button" data-role="advisor-mode" data-mode="jobs" role="tab" aria-selected="false">Práce</button>
+            <button class="btn btn--ghost advisor-mode" type="button" data-role="advisor-mode" data-mode="edu" role="tab" aria-selected="false">Vzdělání</button>
+            <button class="btn btn--ghost advisor-mode" type="button" data-role="advisor-mode" data-mode="courses" role="tab" aria-selected="false">Kurzy</button>
           </div>
-          <p>Popiš školu/praxi a co hledáš. Začneme otázkami.</p>
-        </div>
 
-        <div class="chat-messages" data-role="advisor-messages"></div>
+          <div class="advisor-starters" data-role="advisor-starters" aria-label="Rychlé dotazy"></div>
 
-        <div class="chat-input">
-          <input type="text" data-role="advisor-input" placeholder="Napište svou zprávu...">
-          <button type="button" data-role="advisor-send">→</button>
+          <div class="advisor-chat" aria-label="Chat poradce">
+            <div class="chat-header">
+              <div class="advisor-header-row">
+                <h3>Kariérový poradce <span class="advisor-mode-badge" data-role="advisor-mode-badge" aria-live="polite">Vše</span></h3>
+                <button class="advisor-reset" type="button" data-role="advisor-reset" aria-label="Nový chat">Nový chat</button>
+              </div>
+              <p>Popiš školu/praxi a co hledáš. Začneme otázkami.</p>
+            </div>
+
+            <div class="chat-messages" data-role="advisor-messages"></div>
+
+            <div class="chat-input">
+              <input type="text" data-role="advisor-input" placeholder="Napište svou zprávu...">
+              <button type="button" data-role="advisor-send">→</button>
+            </div>
+          </div>
+
+          <div class="muted" data-role="advisor-status" style="margin-top:.6rem"></div>
         </div>
       </div>
-
-      <div class="muted" data-role="advisor-status" style="margin-top:.6rem"></div>
     </div>
   </section>
 
