@@ -289,6 +289,63 @@ function recommendOffers(offers, search) {
   }));
 }
 
+function countMatchingOffers(offers, search) {
+  const q = String(search?.q || '').trim();
+  const kraj = String(search?.kraj || '').trim();
+  const minMzda = search?.minMzda != null ? Number(search.minMzda) : 0;
+  const tokens = tokensFromQuery(q);
+
+  // If nothing to filter by, don't claim we found "everything".
+  if (!tokens.length && !kraj && !minMzda) return 0;
+
+  let n = 0;
+  for (const o of offers) {
+    if (kraj && String(o?.kraj || '').trim() !== kraj) continue;
+
+    if (minMzda) {
+      const a = o?.mzda_od != null ? Number(o.mzda_od) : null;
+      const b = o?.mzda_do != null ? Number(o.mzda_do) : null;
+      const ok = (Number.isFinite(a) && a >= minMzda) || (Number.isFinite(b) && b >= minMzda);
+      if (!ok) continue;
+    }
+
+    // If the user did not provide a query, the filters above are enough.
+    if (!tokens.length) {
+      n += 1;
+      continue;
+    }
+
+    const txt = offerText(o);
+    const title = normalizeText(o?.profese || '');
+
+    let score = 0;
+    for (const t of tokens) {
+      if (txt.includes(t)) score += 6;
+      if (title && title.includes(t)) score += 6;
+    }
+    if (score > 0) n += 1;
+  }
+  return n;
+}
+
+function buildJobsUrl(search) {
+  const params = new URLSearchParams();
+  const q = String(search?.q || '').trim();
+  const kraj = String(search?.kraj || '').trim();
+  const place = String(search?.place || '').trim();
+  const minMzda = search?.minMzda != null ? Number(search.minMzda) : 0;
+  const dojezdKm = search?.dojezdKm != null ? Number(search.dojezdKm) : 0;
+
+  if (q) params.set('q', q);
+  if (kraj) params.set('kraj', kraj);
+  if (place) params.set('place', place);
+  if (Number.isFinite(minMzda) && minMzda > 0) params.set('min', String(Math.round(minMzda)));
+  if (Number.isFinite(dojezdKm) && dojezdKm > 0) params.set('km', String(Math.round(dojezdKm)));
+
+  const qs = params.toString();
+  return `prace.html${qs ? `?${qs}` : ''}#hledani`;
+}
+
 function json(statusCode, body, extraHeaders = {}) {
   return {
     statusCode,
@@ -560,9 +617,15 @@ exports.handler = async function handler(event) {
     let recommendations = [];
     let edu_recommendations = [];
     let actions = [];
+    let jobs_match_count = null;
+    let jobs_url = null;
     try {
       const cache = await loadOffersFromSite(event);
       const offers = Array.isArray(cache?.offers) ? cache.offers : [];
+      if ((mode === 'jobs' || mode === 'all') && offers.length && out?.search) {
+        jobs_match_count = countMatchingOffers(offers, out.search);
+        if (jobs_match_count && jobs_match_count > 0) jobs_url = buildJobsUrl(out.search);
+      }
       if (mode === 'jobs' && offers.length && out?.search) recommendations = recommendOffers(offers, out.search);
     } catch {
       // ignore recommendations errors
@@ -596,18 +659,28 @@ exports.handler = async function handler(event) {
       } else if (mode === 'courses') {
         actions = [{ label: 'Otevřít kurzy', url: 'kurzy.html' }];
       } else if (mode === 'jobs') {
-        actions = [{ label: 'Otevřít pracovní nabídky', url: 'prace.html#hledani' }];
+        const n = jobs_match_count != null && Number.isFinite(Number(jobs_match_count)) ? Number(jobs_match_count) : null;
+        actions = [
+          {
+            label: n && n > 0 ? `Zobrazit všechny nabídky (${n})` : 'Otevřít pracovní nabídky',
+            url: jobs_url || 'prace.html#hledani'
+          }
+        ];
       } else {
         // all
         actions = [
-          { label: 'Pracovní nabídky', url: 'prace.html#hledani' },
+          { label: 'Pracovní nabídky', url: jobs_url || 'prace.html#hledani' },
           { label: 'Vzdělání', url: 'vzdelani.html' },
           { label: 'Kurzy', url: 'kurzy.html' }
         ];
       }
     }
 
-    return json(200, { ...out, mode, recommendations, edu_recommendations, actions }, { 'access-control-allow-origin': '*' });
+    return json(
+      200,
+      { ...out, mode, recommendations, edu_recommendations, actions, jobs_match_count, jobs_url },
+      { 'access-control-allow-origin': '*' }
+    );
   } catch (e) {
     return json(500, { error: 'Server error.', details: String(e?.message || e) }, { 'access-control-allow-origin': '*' });
   }

@@ -186,11 +186,16 @@ document.addEventListener('DOMContentLoaded', () => {
 			state.lastSearch = data?.search || null;
 			const recos = Array.isArray(data?.recommendations) ? data.recommendations : [];
 			const eduRecos = Array.isArray(data?.edu_recommendations) ? data.edu_recommendations : [];
+			const jobsMatchCount = data?.jobs_match_count != null ? Number(data.jobs_match_count) : null;
+			const jobsUrl = String(data?.jobs_url || '').trim();
 
 			let html = escapeHtmlWithBreaks(reply || 'Rozumím.');
 
 			if (recos.length) {
 				html += '<br><br><b>Doporučené nabídky:</b><br>';
+				if (Number.isFinite(jobsMatchCount) && jobsMatchCount > recos.length) {
+					html += `<div style="opacity:.85; margin-top:.25rem">Vybral jsem top ${Math.min(5, recos.length)} z ${jobsMatchCount} nabídek.</div>`;
+				}
 				html += '<div style="display:grid; gap:.45rem; margin-top:.35rem">';
 				for (const r of recos.slice(0, 5)) {
 					const title = escapeHtml(String(r?.profese || ''));
@@ -207,6 +212,14 @@ document.addEventListener('DOMContentLoaded', () => {
 					html += '</div>';
 				}
 				html += '</div>';
+			}
+
+			// If we have a broad jobs match count but no top picks (e.g., strict scoring), still show a helpful summary.
+			if (!recos.length && Number.isFinite(jobsMatchCount) && jobsMatchCount > 0) {
+				html += `<br><br><div style="opacity:.9"><b>Našel jsem</b> ${jobsMatchCount} nabídek podle toho, co píšeš.</div>`;
+				if (jobsUrl) {
+					html += `<div style="margin-top:.25rem"><a href="${escapeHtml(jobsUrl)}">Zobrazit nabídky</a></div>`;
+				}
 			}
 
 			if (eduRecos.length) {
@@ -244,15 +257,6 @@ document.addEventListener('DOMContentLoaded', () => {
 					html += `<a class="btn btn--ghost" href="${escapeHtml(url)}">${label}</a>`;
 				}
 				html += '</div>';
-			}
-
-			if (
-				(state.mode === 'jobs' || state.mode === 'all') &&
-				state.lastSearch &&
-				(state.lastSearch.q || state.lastSearch.kraj || state.lastSearch.place)
-			) {
-				const url = buildJobsUrl(state.lastSearch);
-				html += `<br><br><a href="${url}">Otevřít vyfiltrované nabídky</a>`;
 			}
 			if (followUp) html += '<br><br>' + escapeHtmlWithBreaks(followUp);
 
