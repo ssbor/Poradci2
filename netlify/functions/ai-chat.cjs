@@ -6,7 +6,7 @@
  *
  * Gemini (default):
  * - GEMINI_API_KEY (required)
- * - GEMINI_MODEL (optional, default: gemini-1.5-flash)
+ * - GEMINI_MODEL (optional, default: gemini-2.5-flash)
  *
  * OpenAI (legacy fallback):
  * - OPENAI_API_KEY (required when AI_PROVIDER=openai)
@@ -15,7 +15,7 @@
 
 const AI_PROVIDER = (process.env.AI_PROVIDER || 'gemini').trim().toLowerCase();
 const DEFAULT_OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
-const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
 let OFFERS_CACHE = {
   at: 0,
