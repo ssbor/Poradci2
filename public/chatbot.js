@@ -16,6 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
 	const statusEl = isEmbedded ? advisorRoot.querySelector('[data-role="advisor-status"]') : null;
 	const embeddedHeaderP = isEmbedded ? advisorRoot.querySelector('.chat-header p') : null;
 	const embeddedModeBadge = isEmbedded ? advisorRoot.querySelector('[data-role="advisor-mode-badge"]') : null;
+	const embeddedResetBtn = isEmbedded ? advisorRoot.querySelector('[data-role="advisor-reset"]') : null;
+	const embeddedStarters = isEmbedded ? advisorRoot.querySelector('[data-role="advisor-starters"]') : null;
 
 	// If neither embedded nor floating markup exists, do nothing.
 	if (!chatMessages || !chatInput || !chatSendButton) return;
@@ -26,6 +28,80 @@ document.addEventListener('DOMContentLoaded', () => {
 		busy: false,
 		lastSearch: null,
 		mode: 'all'
+	};
+
+	const MODE_STORAGE_KEY = 'advisor_mode_v1';
+
+	const normalizeMode = (raw) => {
+		const m = String(raw || '').trim();
+		return ['all', 'jobs', 'edu', 'courses'].includes(m) ? m : 'all';
+	};
+
+	const welcomeMessageForMode = (mode) => {
+		if (mode === 'jobs') {
+			return 'Jasně — pomůžu ti vybrat práci. Napiš: co umíš / praxe, kde chceš pracovat (město/kraj), dojezd a ideálně mzdu.';
+		}
+		if (mode === 'edu') {
+			return 'Jasně — poradím se školou/oborem. Napiš: co máš hotové (výuční list/maturita), co chceš studovat a odkud jsi (město/kraj).';
+		}
+		if (mode === 'courses') {
+			return 'Jasně — poradím s kurzem/rekvalifikací. Napiš: cíl, časové možnosti (kdy můžeš), rozpočet a jestli chceš online nebo prezenčně.';
+		}
+		return 'Jsem chytrý poradce. Napiš mi, co řešíš (práce / škola / kurzy) a pár vět o sobě. Začnu otázkami.';
+	};
+
+	const setActiveModeButton = (mode) => {
+		if (!isEmbedded) return;
+		advisorRoot.querySelectorAll('[data-role="advisor-mode"]').forEach((b) => {
+			const isOn = String(b.getAttribute('data-mode') || '') === mode;
+			b.classList.toggle('is-active', isOn);
+			b.setAttribute('aria-selected', isOn ? 'true' : 'false');
+		});
+	};
+
+	const renderStarters = () => {
+		if (!isEmbedded || !embeddedStarters) return;
+		const mode = state.mode;
+		const starters =
+			mode === 'jobs'
+				? [
+					{ label: 'Hledám práci jako…', text: 'Hledám práci jako … Jsem z … Dojezd … km. Min. mzda … Kč. Umím…' },
+					{ label: 'Brigáda / praxe', text: 'Chci brigádu/praxi. Umím… Můžu kdy… Lokalita…' },
+					{ label: 'Bez praxe', text: 'Nemám praxi, ale chci začít v oboru… Co doporučíš za pozice?' }
+				]
+				: mode === 'edu'
+					? [
+						{ label: 'Nástavba', text: 'Chci nástavbu na maturitu. Mám hotové… Jsem z… Zajímá mě obor…' },
+						{ label: 'Změna oboru', text: 'Chci změnit obor. Baví mě… Nebaví mě… Jsem z…' },
+						{ label: 'Kód oboru', text: 'Hledám obor podle kódu (např. 41-45-M/01). Chci zjistit kde se dá studovat.' }
+					]
+					: mode === 'courses'
+						? [
+							{ label: 'Rekvalifikace', text: 'Chci rekvalifikaci na… Můžu večer/víkendy. Rozpočet… Online/prezenčně…' },
+							{ label: 'Dovednost', text: 'Chci se naučit… kvůli práci. Mám úroveň… Čas týdně…' },
+							{ label: 'Řidičák / svářečák', text: 'Chci získat oprávnění/kvalifikaci (např. řidičák/svářečák). Co je nejlepší postup?' }
+						]
+						: [
+							{ label: 'Najít práci', text: 'Hledám práci jako… Jsem z… Dojezd… km. Min. mzda… Kč.' },
+							{ label: 'Vybrat školu', text: 'Chci pokračovat ve studiu. Mám hotové… Jsem z… Zajímá mě obor…' },
+							{ label: 'Najít kurz', text: 'Chci rekvalifikaci / kurz na… Můžu kdy… Online nebo prezenčně…' }
+						];
+
+		embeddedStarters.innerHTML = starters
+			.map(
+				(s) =>
+					`<button type="button" class="advisor-starter" data-role="advisor-starter" data-text="${escapeHtml(String(s.text || ''))}">${escapeHtml(
+						String(s.label || '')
+					)}</button>`
+			)
+			.join('');
+	};
+
+	const resetChat = () => {
+		state.messages = [];
+		state.lastSearch = null;
+		if (chatMessages) chatMessages.innerHTML = '';
+		addMessageToChat(welcomeMessageForMode(state.mode), 'bot');
 	};
 
 	const escapeHtml = (s) =>
@@ -99,6 +175,8 @@ document.addEventListener('DOMContentLoaded', () => {
 							? 'Popiš cíl a časové možnosti. Doporučím vhodné kurzy / další krok.'
 							: 'Popiš, co řešíš. Pomůžu vybrat nejlepší další krok.';
 		}
+
+		renderStarters();
 	};
 
 	const buildJobsUrl = (search) => {
@@ -282,11 +360,18 @@ document.addEventListener('DOMContentLoaded', () => {
 			}
 		});
 	} else {
+		// Restore last mode for embedded advisor.
+		try {
+			const saved = localStorage.getItem(MODE_STORAGE_KEY);
+			state.mode = normalizeMode(saved || state.mode);
+		} catch {
+			// ignore storage errors
+		}
+
+		setActiveModeButton(state.mode);
+
 		if (chatMessages.children.length === 0) {
-			addMessageToChat(
-				'Jsem chytrý poradce. Napiš mi, co řešíš (práce / škola / kurzy) a pár vět o sobě. Začnu otázkami.',
-				'bot'
-			);
+			addMessageToChat(welcomeMessageForMode(state.mode), 'bot');
 		}
 	}
 
@@ -320,18 +405,61 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	if (isEmbedded) {
 		applyEmbeddedCopy();
+		setActiveModeButton(state.mode);
+		renderStarters();
+
+		if (embeddedResetBtn) {
+			embeddedResetBtn.addEventListener('click', (e) => {
+				e.preventDefault();
+				resetChat();
+			});
+		}
+
+		if (embeddedStarters) {
+			embeddedStarters.addEventListener('click', (e) => {
+				const t = e.target;
+				if (!(t instanceof Element)) return;
+				const btn = t.closest('[data-role="advisor-starter"]');
+				if (!btn) return;
+				e.preventDefault();
+				const txt = String(btn.getAttribute('data-text') || '').trim();
+				if (!txt) return;
+				chatInput.value = txt;
+				chatInput.focus();
+			});
+		}
+
 		advisorRoot.addEventListener('click', (e) => {
 			const t = e.target;
 			if (!(t instanceof Element)) return;
 			const btn = t.closest('[data-role="advisor-mode"]');
 			if (!btn) return;
 			e.preventDefault();
-			const next = String(btn.getAttribute('data-mode') || 'all').trim();
-			state.mode = next || 'all';
+			const next = normalizeMode(btn.getAttribute('data-mode') || 'all');
+			state.mode = next;
+			try {
+				localStorage.setItem(MODE_STORAGE_KEY, state.mode);
+			} catch {
+				// ignore storage errors
+			}
 			applyEmbeddedCopy();
-			advisorRoot
-				.querySelectorAll('[data-role="advisor-mode"]')
-				.forEach((b) => b.classList.toggle('is-active', b === btn));
+			setActiveModeButton(state.mode);
+		});
+
+		advisorRoot.addEventListener('keydown', (e) => {
+			const t = e.target;
+			if (!(t instanceof Element)) return;
+			const isModeBtn = t.matches('[data-role="advisor-mode"]');
+			if (!isModeBtn) return;
+			if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+			e.preventDefault();
+			const btns = Array.from(advisorRoot.querySelectorAll('[data-role="advisor-mode"]'));
+			const idx = btns.indexOf(t);
+			if (idx < 0) return;
+			const delta = e.key === 'ArrowRight' ? 1 : -1;
+			const nextBtn = btns[(idx + delta + btns.length) % btns.length];
+			if (nextBtn) nextBtn.click();
+			if (nextBtn) nextBtn.focus();
 		});
 	}
 });

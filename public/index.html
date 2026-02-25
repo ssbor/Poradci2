@@ -115,16 +115,21 @@
     <p class="section-sub">Napiš mi, co řešíš. Budu se doptávat a pak ti doporučím další krok (práce / vzdělání / kurzy) a u práce i konkrétní nabídky.</p>
 
     <div class="card advisor-card" data-role="advisor-root" style="margin-top: 1rem">
-      <div class="advisor-mode-row" aria-label="Režim poradce">
-        <button class="btn btn--ghost advisor-mode is-active" type="button" data-role="advisor-mode" data-mode="all">Vše</button>
-        <button class="btn btn--ghost advisor-mode" type="button" data-role="advisor-mode" data-mode="jobs">Pracovní nabídky</button>
-        <button class="btn btn--ghost advisor-mode" type="button" data-role="advisor-mode" data-mode="edu">Vzdělání</button>
-        <button class="btn btn--ghost advisor-mode" type="button" data-role="advisor-mode" data-mode="courses">Kurzy</button>
+      <div class="advisor-mode-row" data-role="advisor-mode-group" role="tablist" aria-label="Zaměření poradce">
+        <button class="btn btn--ghost advisor-mode is-active" type="button" data-role="advisor-mode" data-mode="all" role="tab" aria-selected="true">Vše</button>
+        <button class="btn btn--ghost advisor-mode" type="button" data-role="advisor-mode" data-mode="jobs" role="tab" aria-selected="false">Práce</button>
+        <button class="btn btn--ghost advisor-mode" type="button" data-role="advisor-mode" data-mode="edu" role="tab" aria-selected="false">Vzdělání</button>
+        <button class="btn btn--ghost advisor-mode" type="button" data-role="advisor-mode" data-mode="courses" role="tab" aria-selected="false">Kurzy</button>
       </div>
+
+      <div class="advisor-starters" data-role="advisor-starters" aria-label="Rychlé dotazy"></div>
 
       <div class="advisor-chat" aria-label="Chat poradce">
         <div class="chat-header">
-          <h3>Kariérový poradce <span class="advisor-mode-badge" data-role="advisor-mode-badge" aria-live="polite">Vše</span></h3>
+          <div class="advisor-header-row">
+            <h3>Kariérový poradce <span class="advisor-mode-badge" data-role="advisor-mode-badge" aria-live="polite">Vše</span></h3>
+            <button class="advisor-reset" type="button" data-role="advisor-reset" aria-label="Nový chat">Nový chat</button>
+          </div>
           <p>Popiš školu/praxi a co hledáš. Začneme otázkami.</p>
         </div>
 

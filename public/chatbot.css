@@ -79,6 +79,10 @@
 	backdrop-filter: blur(10px);
 }
 
+.advisor-mode-row:focus-within{
+	box-shadow: 0 0 0 4px rgba(0,123,255,.10);
+}
+
 .advisor-mode{
 	box-shadow:none;
 	border-radius: 999px;
@@ -114,6 +118,39 @@
 	background:
 		radial-gradient(circle at 15% 0%, rgba(0,123,255,.18) 0 35%, transparent 36%),
 		linear-gradient(135deg, rgba(224,240,255,.9) 0%, rgba(245,250,255,.95) 100%);
+}
+
+.advisor-header-row{
+	display:flex;
+	align-items:center;
+	justify-content: space-between;
+	gap: .75rem;
+}
+
+.advisor-reset{
+	appearance: none;
+	border: 1px solid rgba(0,0,0,.10);
+	background: rgba(255,255,255,.82);
+	color: rgba(14,26,43,.86);
+	font-weight: 800;
+	font-size: 12px;
+	padding: .4rem .7rem;
+	border-radius: 999px;
+	cursor: pointer;
+	box-shadow: 0 10px 20px rgba(6,30,77,.08);
+}
+
+.advisor-reset:hover{
+	background: rgba(255,255,255,.95);
+}
+
+.advisor-reset:active{
+	transform: translateY(1px);
+}
+
+.advisor-reset:focus{
+	outline: none;
+	box-shadow: 0 0 0 4px rgba(0,123,255,.12), 0 10px 20px rgba(6,30,77,.08);
 }
 
 .advisor-chat .chat-header h3{
@@ -152,6 +189,39 @@
 
 .advisor-chat .chat-header p{
 	margin-top: .35rem;
+}
+
+.advisor-starters{
+	display:flex;
+	flex-wrap:wrap;
+	gap: .45rem;
+	margin-top: .7rem;
+}
+
+.advisor-starter{
+	appearance: none;
+	border: 1px solid rgba(0,0,0,.08);
+	background: rgba(255,255,255,.70);
+	color: rgba(14,26,43,.86);
+	font-weight: 750;
+	font-size: 13px;
+	padding: .45rem .7rem;
+	border-radius: 999px;
+	cursor: pointer;
+	backdrop-filter: blur(10px);
+}
+
+.advisor-starter:hover{
+	background: rgba(255,255,255,.92);
+}
+
+.advisor-starter:active{
+	transform: translateY(1px);
+}
+
+.advisor-starter:focus{
+	outline: none;
+	box-shadow: 0 0 0 4px rgba(0,123,255,.10);
 }
 
 .advisor-chat .chat-messages{
@@ -236,6 +306,14 @@
 
 @media (max-width: 720px){
 	.advisor-chat .chat-messages{ min-height: 280px; max-height: 420px; }
+	.advisor-mode-row{
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+		scrollbar-width: none;
+	}
+	.advisor-mode-row::-webkit-scrollbar{ display:none; }
+	.advisor-mode{ white-space: nowrap; }
 }
 
 /* 3. Hlavička chatu (s titulkem a logem) */
