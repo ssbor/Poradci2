@@ -316,6 +316,20 @@ function stripJsonFromText(raw) {
   return (firstObj ? firstObj[0] : txt).trim();
 }
 
+async function listGeminiModels(geminiKey) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(geminiKey)}`;
+  const resp = await fetch(url, { method: 'GET' });
+  if (!resp.ok) return null;
+  const data = await resp.json().catch(() => null);
+  const models = Array.isArray(data?.models) ? data.models : [];
+  // Trim for safe UI display.
+  return models.slice(0, 50).map((m) => ({
+    name: String(m?.name || ''),
+    displayName: String(m?.displayName || ''),
+    methods: Array.isArray(m?.supportedGenerationMethods) ? m.supportedGenerationMethods : []
+  }));
+}
+
 function clampMessages(raw) {
   const arr = Array.isArray(raw) ? raw : [];
   const out = [];
@@ -487,6 +501,12 @@ exports.handler = async function handler(event) {
 
       if (!resp.ok) {
         const text = await resp.text().catch(() => '');
+        let available_models = null;
+        try {
+          if (resp.status === 404) available_models = await listGeminiModels(geminiKey);
+        } catch {
+          // ignore list models failure
+        }
         return json(
           502,
           {
@@ -494,7 +514,12 @@ exports.handler = async function handler(event) {
             status: resp.status,
             provider,
             model: geminiModel,
-            details: text.slice(0, 2000)
+            details: text.slice(0, 2000),
+            hint:
+              resp.status === 404
+                ? 'Gemini model was not found or does not support generateContent. Set GEMINI_MODEL to one of the available model names that supports generateContent (see available_models).' 
+                : undefined,
+            available_models
           },
           { 'access-control-allow-origin': '*' }
         );
