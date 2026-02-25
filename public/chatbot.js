@@ -144,11 +144,26 @@ document.addEventListener('DOMContentLoaded', () => {
 		if (!resp.ok) {
 			const base = String(data?.error || 'AI služba není dostupná.');
 			const status = data?.status != null ? ` (HTTP ${String(data.status)})` : '';
+			const provider = String(data?.provider || '').trim();
+			const model = String(data?.model || '').trim();
+			const who = provider || model ? `\nProvider: ${provider || '?'}${model ? `, model: ${model}` : ''}` : '';
 			const detailsRaw = String(data?.details || '').trim();
 			const details = detailsRaw ? `: ${detailsRaw.replace(/\s+/g, ' ').slice(0, 260)}` : '';
+			let modelsHint = '';
+			const available = Array.isArray(data?.available_models) ? data.available_models : [];
+			if (available.length) {
+				const names = available
+					.filter((m) => Array.isArray(m?.methods) && m.methods.includes('generateContent'))
+					.map((m) => String(m?.name || '').replace(/^models\//, '').trim())
+					.filter(Boolean)
+					.slice(0, 12);
+				if (names.length) {
+					modelsHint = `\nDostupné Gemini modely: ${names.join(', ')}`;
+				}
+			}
 			const hintRaw = String(data?.hint || '').trim();
 			const hint = hintRaw ? `\n${hintRaw}` : '';
-			throw new Error(`${base}${status}${details}${hint}`);
+			throw new Error(`${base}${status}${details}${who}${modelsHint}${hint}`);
 		}
 		return data;
 	};

@@ -502,8 +502,19 @@ exports.handler = async function handler(event) {
       if (!resp.ok) {
         const text = await resp.text().catch(() => '');
         let available_models = null;
+        let available_models_text = '';
         try {
-          if (resp.status === 404) available_models = await listGeminiModels(geminiKey);
+          if (resp.status === 404) {
+            available_models = await listGeminiModels(geminiKey);
+            if (Array.isArray(available_models) && available_models.length) {
+              const names = available_models
+                .filter((m) => Array.isArray(m?.methods) && m.methods.includes('generateContent'))
+                .map((m) => String(m?.name || '').replace(/^models\//, '').trim())
+                .filter(Boolean)
+                .slice(0, 12);
+              if (names.length) available_models_text = `Available Gemini models (generateContent): ${names.join(', ')}`;
+            }
+          }
         } catch {
           // ignore list models failure
         }
@@ -517,7 +528,7 @@ exports.handler = async function handler(event) {
             details: text.slice(0, 2000),
             hint:
               resp.status === 404
-                ? 'Gemini model was not found or does not support generateContent. Set GEMINI_MODEL to one of the available model names that supports generateContent (see available_models).' 
+                ? `Gemini model was not found or does not support generateContent. Set GEMINI_MODEL to a model that supports generateContent (see available_models).${available_models_text ? ` ${available_models_text}` : ''}`
                 : undefined,
             available_models
           },
