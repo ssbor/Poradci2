@@ -49,6 +49,33 @@ function inferIntentFromText(raw) {
   return '';
 }
 
+function extractProgramCodeFromText(raw) {
+  const s = String(raw || '');
+  const m = s.match(/\b\d{2}\s*[-–]\s*\d{2}\s*[-–]\s*[A-Za-z]\s*\/\s*\d{2}\b/);
+  if (!m) return '';
+  return String(m[0] || '').replace(/\s+/g, '').replace(/–/g, '-');
+}
+
+function normalizeSearchForAuto(searchRaw, { intent, lastUserMsg }) {
+  const search = searchRaw && typeof searchRaw === 'object' ? { ...searchRaw } : {};
+  const q = String(search.q || '').trim();
+
+  if (!q && intent && intent !== 'general') {
+    const txt = String(lastUserMsg || '').trim();
+    if (txt) search.q = txt.slice(0, 180);
+  }
+
+  // Help education intent: if user pasted program code, store it.
+  if (intent === 'edu') {
+    const code = String(search.code || '').trim();
+    if (!code) {
+      const extracted = extractProgramCodeFromText(lastUserMsg);
+      if (extracted) search.code = extracted;
+    }
+  }
+  return search;
+}
+
 function hasAnySearch(search) {
   if (!search || typeof search !== 'object') return false;
   const q = String(search.q || '').trim();
@@ -80,12 +107,80 @@ function normalizeText(s) {
 }
 
 function tokensFromQuery(q) {
+  const stop = new Set([
+    'a',
+    'i',
+    'ne',
+    'ze',
+    'se',
+    'si',
+    'ja',
+    'ty',
+    'on',
+    'ona',
+    'to',
+    'ten',
+    'ta',
+    'tohle',
+    'tahle',
+    'toto',
+    'mi',
+    'me',
+    'mne',
+    'muj',
+    'moje',
+    'moji',
+    'nas',
+    'v',
+    've',
+    'na',
+    'do',
+    'od',
+    'pro',
+    'po',
+    'u',
+    'z',
+    'za',
+    'k',
+    'ke',
+    'bez',
+    'o',
+    'co',
+    'jak',
+    'kde',
+    'kdy',
+    'kolik',
+    'proc',
+    'proto',
+    'chci',
+    'chtel',
+    'chtela',
+    'hledam',
+    'hledat',
+    'potrebuju',
+    'potrebuji',
+    'zajima',
+    'zajimalo',
+    'porad',
+    'jen',
+    'taky',
+    'asi',
+    'jako',
+    'aby',
+    'bych',
+    'by',
+    'byt',
+    'bydleni',
+    'ziti'
+  ]);
   const t = normalizeText(q)
     .split(/[\s,]+/g)
     .map((x) => x.trim())
     .filter(Boolean)
     .filter((x) => x.length >= 2);
-  return Array.from(new Set(t)).slice(0, 12);
+
+  const filtered = t.filter((x) => !stop.has(x));
+  return Array.from(new Set(filtered.length ? filtered : t)).slice(0, 12);
 }
 
 function normalizeProgramCode(s) {
@@ -618,6 +713,7 @@ exports.handler = async function handler(event) {
       '- jobs: doptávej se na lokalitu (město/kraj), dojezd, mzdu, úvazek, praxi, dovednosti. ' +
       '- edu: doptávej se na úroveň (výuční list/maturita/VOŠ/VŠ), obor, kraj/město, formu (denní/dálková/kombinovaná), a zda jde o nástavbu nebo změnu oboru. ' +
       '- courses: doptávej se na cíl (rekvalifikace vs doplnění), časové možnosti, rozpočet a lokalitu/online. ' +
+      'U obecného Q&A buď užitečný: když se uživatel ptá na cenu dopravy / bydlení / život v lokalitě, dej rozumný hrubý odhad a postup výpočtu, ale jasně řekni, že nemáš přístup k aktuálním ceníkům a že přesnou cenu je potřeba ověřit. Doptávej se na chybějící údaje (odkud–kam, způsob dopravy, počet dní v týdnu, nájem vs spolubydlení, velikost bytu, město). ' +
       'Důležité: nepřepínej stránku ani nenařizuj proklik; jen konverzuj a doptávej se. ' +
       'Vždy odpovídej ČESKY. ' +
       'V odpovědi vrať POUZE JSON objekt (bez markdownu). ' +
@@ -770,6 +866,8 @@ exports.handler = async function handler(event) {
     const intentFromMode = mode === 'jobs' ? 'jobs' : mode === 'edu' ? 'edu' : mode === 'courses' ? 'courses' : '';
     const intent = mode === 'auto' ? (outIntent || inferredIntent || 'general') : outIntent || intentFromMode || '';
 
+    const normalizedSearch = mode === 'auto' ? normalizeSearchForAuto(out?.search, { intent, lastUserMsg }) : (out?.search || null);
+
     let recommendations = [];
     let edu_recommendations = [];
     let actions = [];
@@ -779,7 +877,7 @@ exports.handler = async function handler(event) {
     let edu_url = null;
 
     // Normalize education region filter if AI used a human region name.
-    let searchForEdu = out?.search && typeof out.search === 'object' ? { ...out.search } : null;
+    let searchForEdu = normalizedSearch && typeof normalizedSearch === 'object' ? { ...normalizedSearch } : null;
 
     try {
       const cache = await loadOffersFromSite(event);
@@ -788,12 +886,12 @@ exports.handler = async function handler(event) {
         (mode === 'jobs' || mode === 'all') ||
         (mode === 'auto' && intent === 'jobs');
 
-      if (shouldComputeJobs && offers.length && out?.search) {
-        jobs_match_count = countMatchingOffers(offers, out.search);
-        if (jobs_match_count && jobs_match_count > 0) jobs_url = buildJobsUrl(out.search);
+      if (shouldComputeJobs && offers.length && normalizedSearch) {
+        jobs_match_count = countMatchingOffers(offers, normalizedSearch);
+        if (jobs_match_count && jobs_match_count > 0) jobs_url = buildJobsUrl(normalizedSearch);
       }
-      if ((mode === 'jobs' || (mode === 'auto' && intent === 'jobs')) && offers.length && out?.search) {
-        recommendations = recommendOffers(offers, out.search);
+      if ((mode === 'jobs' || (mode === 'auto' && intent === 'jobs')) && offers.length && normalizedSearch) {
+        recommendations = recommendOffers(offers, normalizedSearch);
       }
     } catch {
       // ignore recommendations errors
@@ -801,16 +899,16 @@ exports.handler = async function handler(event) {
 
     try {
       const shouldComputeEdu = mode === 'edu' || (mode === 'auto' && intent === 'edu');
-      if (shouldComputeEdu && out?.search) {
+      if (shouldComputeEdu && normalizedSearch) {
         const cache = await loadSchoolsFromSite(event);
         const schools = Array.isArray(cache?.schools) ? cache.schools : [];
         if (schools.length) {
-          const resolved = resolveSchoolKrajId(schools, out?.search?.krajId || out?.search?.kraj);
+          const resolved = resolveSchoolKrajId(schools, normalizedSearch?.krajId || normalizedSearch?.kraj);
           if (resolved) {
             searchForEdu = { ...(searchForEdu || {}), krajId: resolved };
           }
 
-          const baseSearch = searchForEdu || out.search;
+          const baseSearch = searchForEdu || normalizedSearch;
           edu_match_count = countMatchingSchools(schools, baseSearch);
           if (edu_match_count && edu_match_count > 0) edu_url = buildEduUrl(baseSearch);
           edu_recommendations = recommendSchools(schools, baseSearch);
@@ -871,9 +969,14 @@ exports.handler = async function handler(event) {
       }
     }
 
+    // Optional: a stable landing page the user can open after agreeing on what to search.
+    if (okToShowActions && (jobs_url || edu_url) && actions.length) {
+      actions = [{ label: 'Přehled výsledků', url: 'vysledky.html' }, ...actions].slice(0, 4);
+    }
+
     return json(
       200,
-      { ...out, mode, intent, recommendations, edu_recommendations, actions, jobs_match_count, jobs_url, edu_match_count, edu_url },
+      { ...out, mode, intent, search: normalizedSearch || out?.search || null, recommendations, edu_recommendations, actions, jobs_match_count, jobs_url, edu_match_count, edu_url },
       { 'access-control-allow-origin': '*' }
     );
   } catch (e) {

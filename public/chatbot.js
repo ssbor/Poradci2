@@ -418,6 +418,14 @@ document.addEventListener('DOMContentLoaded', () => {
 		setStatus('Přemýšlím');
 		try {
 			const data = await callAI();
+			try {
+				localStorage.setItem(
+					'advisor_last_payload_v1',
+					JSON.stringify({ at: Date.now(), payload: data })
+				);
+			} catch {
+				// ignore storage errors
+			}
 			const reply = String((data && data.reply) || '').trim();
 			const followUp = data && data.follow_up ? String(data.follow_up).trim() : '';
 			state.lastSearch = data?.search || null;

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <title>Přehled výsledků – SŠ Bor (poradci)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="style.css?v=20260302-1">
+  <link rel="stylesheet" href="chatbot.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="Domů">
+        <div class="brand-mark" style="background: linear-gradient(135deg, #111827 0%, #4f46e5 100%);">OK</div>
+        <div>
+          <p class="brand-title">Střední škola Bor</p>
+          <p class="brand-sub">Kariérové poradenství · Přehled výsledků</p>
+        </div>
+      </a>
+      <nav class="nav" aria-label="Hlavní navigace">
+        <a href="index.html#rozcestnik">Rozcestník</a>
+        <a href="prace.html">Práce</a>
+        <a href="vzdelani.html">Vzdělání</a>
+        <a href="kurzy.html">Kurzy</a>
+        <a href="index.html#faq">FAQ</a>
+        <a href="index.html#kontakt">Kontakt</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="section">
+      <h1 style="margin:0">Přehled výsledků z poradce</h1>
+      <p class="muted" style="margin-top:.5rem">Tahle stránka ukazuje poslední výsledky z chatu (uložené v prohlížeči). Pokud je nevidíš, vrať se do poradce a napiš dotaz.</p>
+
+      <div class="card" style="margin-top:1rem">
+        <div style="display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; justify-content:space-between">
+          <div>
+            <div class="muted" data-role="results-meta">—</div>
+            <div style="margin-top:.25rem; font-weight:800" data-role="results-intent">—</div>
+          </div>
+          <div style="display:flex; gap:.6rem; flex-wrap:wrap">
+            <a class="btn btn--ghost" href="index.html#poradce">Zpět na poradce</a>
+            <button class="btn btn--ghost" type="button" data-role="results-clear">Smazat přehled</button>
+          </div>
+        </div>
+
+        <div style="margin-top:1rem" data-role="results-summary"></div>
+      </div>
+
+      <div data-role="results-actions" style="margin-top:1rem"></div>
+      <div data-role="results-jobs" style="margin-top:1rem"></div>
+      <div data-role="results-edu" style="margin-top:1rem"></div>
+    </section>
+  </main>
+
+  <script src="vysledky.js?v=20260302-1"></script>
+</body>
+</html>
