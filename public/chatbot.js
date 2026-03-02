@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		// Floating chatbot uses single-thread state.
 		messages: [],
 		lastSearch: null,
-		mode: 'all',
+		mode: 'auto',
 		// Embedded advisor uses sessions.
 		sessions: [],
 		activeSessionId: null
@@ -42,11 +42,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	const normalizeMode = (raw) => {
 		const m = String(raw || '').trim();
-		return ['all', 'jobs', 'edu', 'courses'].includes(m) ? m : 'all';
+		return ['auto', 'all', 'jobs', 'edu', 'courses'].includes(m) ? m : 'auto';
 	};
 
 	const modeLabel = (mode) =>
-		mode === 'jobs' ? 'Práce' : mode === 'edu' ? 'Vzdělání' : mode === 'courses' ? 'Kurzy' : 'Vše';
+		mode === 'auto' ? 'Auto' : mode === 'jobs' ? 'Práce' : mode === 'edu' ? 'Vzdělání' : mode === 'courses' ? 'Kurzy' : 'Vše';
 
 	const nowTs = () => Date.now();
 
@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	const getMode = () => {
 		if (!isEmbedded) return state.mode;
-		return normalizeMode(getActiveSession()?.mode || 'all');
+		return normalizeMode(getActiveSession()?.mode || 'auto');
 	};
 
 	const getMessagesForRequest = () => {
@@ -164,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		state.sessions = state.sessions.filter((s) => s && s.id !== id);
 		if (state.sessions.length === before) return;
 		if (state.activeSessionId === id) state.activeSessionId = state.sessions[0]?.id || null;
-		if (!state.activeSessionId) createSession('all');
+		if (!state.activeSessionId) createSession('auto');
 		saveSessions();
 	};
 
@@ -230,7 +230,9 @@ document.addEventListener('DOMContentLoaded', () => {
 				? 'Jsem poradce pro vzdělání. Napiš mi, co řešíš.'
 				: mode === 'courses'
 					? 'Jsem poradce pro kurzy. Napiš mi, co řešíš.'
-					: 'Jsem chytrý poradce. Napiš mi, co řešíš.';
+					: mode === 'auto'
+						? 'Jsem chytrý poradce. Rozpoznám, jestli řešíš práci, vzdělání nebo kurzy. Napiš mi, co potřebuješ.'
+						: 'Jsem chytrý poradce. Napiš mi, co řešíš.';
 	};
 
 	const setActiveModeButton = (mode) => {
@@ -297,14 +299,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		if (embeddedModeBadge) {
 			const label =
-				mode === 'jobs'
-					? 'Práce'
-					: mode === 'edu'
-						? 'Vzdělání'
-						: mode === 'courses'
-							? 'Kurzy'
-							: 'Vše';
+				mode === 'auto'
+					? 'Auto'
+					: mode === 'jobs'
+						? 'Práce'
+						: mode === 'edu'
+							? 'Vzdělání'
+							: mode === 'courses'
+								? 'Kurzy'
+								: 'Vše';
 			embeddedModeBadge.textContent = label;
+			embeddedModeBadge.classList.toggle('is-auto', mode === 'auto');
 			embeddedModeBadge.classList.toggle('is-jobs', mode === 'jobs');
 			embeddedModeBadge.classList.toggle('is-edu', mode === 'edu');
 			embeddedModeBadge.classList.toggle('is-courses', mode === 'courses');
@@ -389,7 +394,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		if (!messageText) return;
 		if (state.busy) return;
 		if (isEmbedded && !getActiveSession()) {
-			createSession('all');
+			createSession('auto');
 		}
 
 		addMessageToChat(messageText, 'user');
@@ -420,6 +425,8 @@ document.addEventListener('DOMContentLoaded', () => {
 			const eduRecos = Array.isArray(data?.edu_recommendations) ? data.edu_recommendations : [];
 			const jobsMatchCount = data?.jobs_match_count != null ? Number(data.jobs_match_count) : null;
 			const jobsUrl = String(data?.jobs_url || '').trim();
+			const eduMatchCount = data?.edu_match_count != null ? Number(data.edu_match_count) : null;
+			const eduUrl = String(data?.edu_url || '').trim();
 
 			let html = escapeHtmlWithBreaks(reply || 'Rozumím.');
 
@@ -456,6 +463,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 			if (eduRecos.length) {
 				html += '<br><br><b>Doporučené školy / obory:</b><br>';
+				if (Number.isFinite(eduMatchCount) && eduMatchCount > eduRecos.length) {
+					html += `<div style="opacity:.85; margin-top:.25rem">Vybral jsem top ${Math.min(5, eduRecos.length)} z ${eduMatchCount} škol.</div>`;
+				}
 				html += '<div style="display:grid; gap:.45rem; margin-top:.35rem">';
 				for (const r of eduRecos.slice(0, 5)) {
 					const school = escapeHtml(String(r?.school_name || ''));
@@ -477,6 +487,14 @@ document.addEventListener('DOMContentLoaded', () => {
 					html += '</div>';
 				}
 				html += '</div>';
+			}
+
+			// If we have edu matches but no top picks, still show a helpful summary.
+			if (!eduRecos.length && Number.isFinite(eduMatchCount) && eduMatchCount > 0) {
+				html += `<br><br><div style="opacity:.9"><b>Našel jsem</b> ${eduMatchCount} škol podle toho, co píšeš.</div>`;
+				if (eduUrl) {
+					html += `<div style="margin-top:.25rem"><a href="${escapeHtml(eduUrl)}">Zobrazit školy</a></div>`;
+				}
 			}
 
 			const actions = Array.isArray(data?.actions) ? data.actions : [];
@@ -533,7 +551,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		// Embedded advisor: load sessions + restore last used mode.
 		loadSessions();
 		if (!state.sessions.length) {
-			let startMode = 'all';
+			let startMode = 'auto';
 			try {
 				const saved = localStorage.getItem(MODE_STORAGE_KEY);
 				startMode = normalizeMode(saved || startMode);

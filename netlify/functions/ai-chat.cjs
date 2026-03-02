@@ -33,6 +33,42 @@ let SCHOOLS_CACHE = {
   schools: null
 };
 
+function normalizeIntent(raw) {
+  const v = String(raw || '').trim().toLowerCase();
+  return ['jobs', 'edu', 'courses', 'general'].includes(v) ? v : '';
+}
+
+function inferIntentFromText(raw) {
+  const t = normalizeText(raw);
+  if (!t) return '';
+
+  // Order matters: courses/edu keywords can overlap with general career questions.
+  if (/(\bkurz\b|rekvalifik|certifik|osvedcen|skolen)/i.test(t)) return 'courses';
+  if (/(\bskol\b|\bobor\b|maturit|nastavb|vos\b|vs\b|prihlask|ucen|vyuc|stud)/i.test(t)) return 'edu';
+  if (/(\bprace\b|zamestnan|\bmzda\b|\bpozic\b|nabidk|brigad|uvazek|pohovor|zivotopis|cv\b)/i.test(t)) return 'jobs';
+  return '';
+}
+
+function hasAnySearch(search) {
+  if (!search || typeof search !== 'object') return false;
+  const q = String(search.q || '').trim();
+  const kraj = String(search.kraj || '').trim();
+  const krajId = String(search.krajId || '').trim();
+  const place = String(search.place || '').trim();
+  const code = String(search.code || '').trim();
+  const minMzda = search.minMzda != null ? Number(search.minMzda) : 0;
+  const dojezdKm = search.dojezdKm != null ? Number(search.dojezdKm) : 0;
+  return (
+    !!q ||
+    !!code ||
+    !!kraj ||
+    !!krajId ||
+    !!place ||
+    (Number.isFinite(minMzda) && minMzda > 0) ||
+    (Number.isFinite(dojezdKm) && dojezdKm > 0)
+  );
+}
+
 function normalizeText(s) {
   return String(s || '')
     .toLowerCase()
@@ -177,17 +213,46 @@ function labelStupen(id) {
   return m[k] || k || '';
 }
 
+function resolveSchoolKrajId(schools, raw) {
+  const v = String(raw || '').trim();
+  if (!v) return '';
+
+  // If already in the expected id format.
+  if (/^Kraj\/[0-9]+$/i.test(v)) return v;
+
+  const n = normalizeText(v);
+  if (!n) return '';
+
+  const map = new Map();
+  for (const s of Array.isArray(schools) ? schools : []) {
+    const id = String(s?.adresa?.krajId || '').trim();
+    const name = String(s?.adresa?.kraj || '').trim();
+    if (!id || !name) continue;
+    map.set(normalizeText(name), id);
+  }
+
+  if (map.has(n)) return map.get(n) || '';
+
+  // Fuzzy contains match for user inputs like "plzen".
+  for (const [nameN, id] of map.entries()) {
+    if (nameN.includes(n) || n.includes(nameN)) return id;
+  }
+  return '';
+}
+
 function recommendSchools(schools, search) {
   const qRaw = String(search?.q || '').trim();
   const q = normalizeText(qRaw);
   const tokens = tokensFromQuery(q);
-  const nuts3 = String(search?.kraj || '').trim(); // we use NUTS3 here
+  const krajId = String(search?.krajId || '').trim();
+  const nuts3 = String(search?.nuts3 || '').trim() || (String(search?.kraj || '').trim().startsWith('CZ') ? String(search?.kraj || '').trim() : '');
   const codeLike = normalizeProgramCode(qRaw);
 
   if (!tokens.length && !codeLike) return [];
 
   const out = [];
   for (const s of schools) {
+    if (krajId && String(s?.adresa?.krajId || '').trim() !== krajId) continue;
     if (nuts3 && String(s?.adresa?.nuts3 || '').trim() !== nuts3) continue;
 
     const schoolTxt = normalizeText([s?.nk, s?.name, s?.adresa?.obec, s?.adresa?.kraj, s?.adresa?.nuts3].filter(Boolean).join(' | '));
@@ -235,6 +300,56 @@ function recommendSchools(schools, search) {
     stupen: labelStupen(p?.stupen),
     ukonceni: String(p?.ukonceni || '')
   }));
+}
+
+function countMatchingSchools(schools, search) {
+  const qRaw = String(search?.q || '').trim();
+  const q = normalizeText(qRaw);
+  const tokens = tokensFromQuery(q);
+  const codeQuery = normalizeProgramCode(search?.code || '') || normalizeProgramCode(qRaw);
+  const krajId = String(search?.krajId || '').trim();
+
+  if (!tokens.length && !codeQuery && !krajId) return 0;
+
+  let n = 0;
+  for (const s of Array.isArray(schools) ? schools : []) {
+    if (krajId && String(s?.adresa?.krajId || '').trim() !== krajId) continue;
+
+    const schoolTxt = normalizeText(
+      [s?.nk, s?.name, s?.adresa?.obec, s?.adresa?.okres, s?.adresa?.kraj].filter(Boolean).join(' | ')
+    );
+
+    const schoolHit = tokens.length ? tokens.some((t) => schoolTxt.includes(t)) : false;
+
+    let programHit = false;
+    const programs = Array.isArray(s?.programs) ? s.programs : [];
+    for (const p of programs) {
+      if (codeQuery) {
+        const pc = normalizeProgramCode(p?.code);
+        if (pc && (pc === codeQuery || pc.includes(codeQuery) || codeQuery.includes(pc))) {
+          programHit = true;
+          break;
+        }
+      }
+      if (!tokens.length) continue;
+      const pTxt = normalizeText([p?.nk, p?.name, p?.code].filter(Boolean).join(' | '));
+      for (const t of tokens) {
+        if (pTxt.includes(t)) {
+          programHit = true;
+          break;
+        }
+      }
+      if (programHit) break;
+    }
+
+    if (tokens.length || codeQuery) {
+      if (schoolHit || programHit) n += 1;
+    } else {
+      // kraj-only filter: count school.
+      if (krajId) n += 1;
+    }
+  }
+  return n;
 }
 
 function recommendOffers(offers, search) {
@@ -344,6 +459,36 @@ function buildJobsUrl(search) {
 
   const qs = params.toString();
   return `prace.html${qs ? `?${qs}` : ''}#hledani`;
+}
+
+function buildEduUrl(search) {
+  const params = new URLSearchParams();
+  const q = String(search?.q || '').trim();
+  const code = String(search?.code || '').trim();
+  const krajId = String(search?.krajId || '').trim();
+  const typ = String(search?.typSkoly || '').trim();
+  const druh = String(search?.druhSkoly || '').trim();
+  const stupen = String(search?.stupen || '').trim();
+  const forma = String(search?.forma || '').trim();
+
+  if (q) params.set('q', q);
+  if (code) params.set('code', code);
+  if (krajId) params.set('kraj', krajId);
+  if (typ) params.set('typ', typ);
+  if (druh) params.set('druh', druh);
+  if (stupen) params.set('stupen', stupen);
+  if (forma) params.set('forma', forma);
+
+  const qs = params.toString();
+  return `vzdelani.html${qs ? `?${qs}` : ''}#hledani`;
+}
+
+function buildCoursesUrl(search) {
+  const q = String(search?.q || '').trim();
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  const qs = params.toString();
+  return `kurzy.html${qs ? `?${qs}` : ''}`;
 }
 
 function json(statusCode, body, extraHeaders = {}) {
@@ -458,8 +603,8 @@ exports.handler = async function handler(event) {
   }
 
   const body = parsed.value || {};
-  const modeRaw = String(body?.mode || 'all').trim();
-  const mode = ['all', 'jobs', 'edu', 'courses'].includes(modeRaw) ? modeRaw : 'all';
+  const modeRaw = String(body?.mode || 'auto').trim();
+  const mode = ['auto', 'all', 'jobs', 'edu', 'courses'].includes(modeRaw) ? modeRaw : 'auto';
   const context = body?.context && typeof body.context === 'object' ? body.context : {};
   const messages = clampMessages(body?.messages);
 
@@ -467,8 +612,9 @@ exports.handler = async function handler(event) {
     role: 'system',
     content:
       'Jsi chytrý poradce pro web SŠ Bor. ' +
-      'Režim je daný polem mode: all (vše), jobs (pracovní nabídky), edu (vzdělání/školy), courses (kurzy). ' +
-      'Chovej se jako SPECIALISTA podle režimu: ' +
+      'Režim je daný polem mode: auto (automaticky), all (vše), jobs (pracovní nabídky), edu (vzdělání/školy), courses (kurzy). ' +
+      'Pokud je mode=auto, SÁM rozpoznej téma a nastav intent. Přitom pořád umíš odpovědět na jakýkoli dotaz (general Q&A). ' +
+      'Chovej se jako SPECIALISTA podle zvoleného intent/módu: ' +
       '- jobs: doptávej se na lokalitu (město/kraj), dojezd, mzdu, úvazek, praxi, dovednosti. ' +
       '- edu: doptávej se na úroveň (výuční list/maturita/VOŠ/VŠ), obor, kraj/město, formu (denní/dálková/kombinovaná), a zda jde o nástavbu nebo změnu oboru. ' +
       '- courses: doptávej se na cíl (rekvalifikace vs doplnění), časové možnosti, rozpočet a lokalitu/online. ' +
@@ -476,8 +622,11 @@ exports.handler = async function handler(event) {
       'Vždy odpovídej ČESKY. ' +
       'V odpovědi vrať POUZE JSON objekt (bez markdownu). ' +
       'Drž se schématu: ' +
-        '{"reply":string,"profile":{...},"search":{"q":string,"kraj":string|null,"place":string|null,"minMzda":number|null,"dojezdKm":number|null},"follow_up":string|null}. ' +
-        'V edu/courses můžeš použít search.q pro klíčová slova (obor/škola/kraj/forma), i když nejde o práci.' +
+        '{"reply":string,"intent":"jobs"|"edu"|"courses"|"general","profile":{...},"search":{"q":string,"kraj":string|null,"place":string|null,"minMzda":number|null,"dojezdKm":number|null,"code":string|null,"krajId":string|null},"follow_up":string|null}. ' +
+        'Poznámky: ' +
+        '- intent=general použij pro běžné dotazy, které nejsou o práci/školách/kurzech. ' +
+        '- Pro školy můžeš dát do search.code kód oboru (např. 23-45-M/01) a do search.kraj (nebo krajId) kraj (stačí i název kraje); server si to převede. ' +
+        '- V edu/courses použij search.q pro klíčová slova (obor/škola/kraj/forma), i když nejde o práci.' +
         (ADVISOR_STYLE ? `\n\nDOPLŇUJÍCÍ INSTRUKCE (ADVISOR_STYLE):\n${ADVISOR_STYLE}` : '')
   };
 
@@ -614,50 +763,96 @@ exports.handler = async function handler(event) {
     }
 
     const out = outParsed.value || {};
+    const followUpTxt = String(out?.follow_up || '').trim();
+    const outIntent = normalizeIntent(out?.intent);
+    const lastUserMsg = [...messages].reverse().find((m) => m && m.role === 'user' && String(m.content || '').trim())?.content || '';
+    const inferredIntent = inferIntentFromText(lastUserMsg);
+    const intentFromMode = mode === 'jobs' ? 'jobs' : mode === 'edu' ? 'edu' : mode === 'courses' ? 'courses' : '';
+    const intent = mode === 'auto' ? (outIntent || inferredIntent || 'general') : outIntent || intentFromMode || '';
+
     let recommendations = [];
     let edu_recommendations = [];
     let actions = [];
     let jobs_match_count = null;
     let jobs_url = null;
+    let edu_match_count = null;
+    let edu_url = null;
+
+    // Normalize education region filter if AI used a human region name.
+    let searchForEdu = out?.search && typeof out.search === 'object' ? { ...out.search } : null;
+
     try {
       const cache = await loadOffersFromSite(event);
       const offers = Array.isArray(cache?.offers) ? cache.offers : [];
-      if ((mode === 'jobs' || mode === 'all') && offers.length && out?.search) {
+      const shouldComputeJobs =
+        (mode === 'jobs' || mode === 'all') ||
+        (mode === 'auto' && intent === 'jobs');
+
+      if (shouldComputeJobs && offers.length && out?.search) {
         jobs_match_count = countMatchingOffers(offers, out.search);
         if (jobs_match_count && jobs_match_count > 0) jobs_url = buildJobsUrl(out.search);
       }
-      if (mode === 'jobs' && offers.length && out?.search) recommendations = recommendOffers(offers, out.search);
+      if ((mode === 'jobs' || (mode === 'auto' && intent === 'jobs')) && offers.length && out?.search) {
+        recommendations = recommendOffers(offers, out.search);
+      }
     } catch {
       // ignore recommendations errors
     }
 
     try {
-      if (mode === 'edu' && out?.search) {
+      const shouldComputeEdu = mode === 'edu' || (mode === 'auto' && intent === 'edu');
+      if (shouldComputeEdu && out?.search) {
         const cache = await loadSchoolsFromSite(event);
         const schools = Array.isArray(cache?.schools) ? cache.schools : [];
-        if (schools.length) edu_recommendations = recommendSchools(schools, out.search);
+        if (schools.length) {
+          const resolved = resolveSchoolKrajId(schools, out?.search?.krajId || out?.search?.kraj);
+          if (resolved) {
+            searchForEdu = { ...(searchForEdu || {}), krajId: resolved };
+          }
+
+          const baseSearch = searchForEdu || out.search;
+          edu_match_count = countMatchingSchools(schools, baseSearch);
+          if (edu_match_count && edu_match_count > 0) edu_url = buildEduUrl(baseSearch);
+          edu_recommendations = recommendSchools(schools, baseSearch);
+        }
       }
     } catch {
       // ignore edu recommendations errors
     }
 
-    const followUpTxt = String(out?.follow_up || '').trim();
-    const hasAnySearch =
-      !!out?.search &&
-      (String(out.search.q || '').trim() ||
-        String(out.search.kraj || '').trim() ||
-        String(out.search.place || '').trim() ||
-        (out.search.minMzda != null && Number(out.search.minMzda) > 0) ||
-        (out.search.dojezdKm != null && Number(out.search.dojezdKm) > 0));
+    const anySearch = hasAnySearch(out?.search);
 
     // UX: show redirect actions only once the assistant is not asking more questions.
-    const okToShowActions = !followUpTxt && (mode !== 'jobs' || hasAnySearch);
+    const okToShowActions = !followUpTxt && (mode !== 'jobs' || anySearch);
 
     if (okToShowActions) {
-      if (mode === 'edu') {
-        actions = [{ label: 'Otevřít vzdělání', url: 'vzdelani.html' }];
+      if (mode === 'auto') {
+        if (intent === 'jobs') {
+          const n = jobs_match_count != null && Number.isFinite(Number(jobs_match_count)) ? Number(jobs_match_count) : null;
+          actions = [
+            {
+              label: n && n > 0 ? `Zobrazit nabídky (${n})` : 'Otevřít pracovní nabídky',
+              url: jobs_url || 'prace.html#hledani'
+            }
+          ];
+        } else if (intent === 'edu') {
+          const n = edu_match_count != null && Number.isFinite(Number(edu_match_count)) ? Number(edu_match_count) : null;
+          actions = [
+            {
+              label: n && n > 0 ? `Zobrazit školy (${n})` : 'Otevřít vzdělání',
+              url: edu_url || 'vzdelani.html#hledani'
+            }
+          ];
+        } else if (intent === 'courses') {
+          actions = [{ label: 'Otevřít kurzy', url: buildCoursesUrl(out?.search || {}) }];
+        } else {
+          actions = [];
+        }
+      } else if (mode === 'edu') {
+        const n = edu_match_count != null && Number.isFinite(Number(edu_match_count)) ? Number(edu_match_count) : null;
+        actions = [{ label: n && n > 0 ? `Zobrazit školy (${n})` : 'Otevřít vzdělání', url: edu_url || 'vzdelani.html#hledani' }];
       } else if (mode === 'courses') {
-        actions = [{ label: 'Otevřít kurzy', url: 'kurzy.html' }];
+        actions = [{ label: 'Otevřít kurzy', url: buildCoursesUrl(out?.search || {}) }];
       } else if (mode === 'jobs') {
         const n = jobs_match_count != null && Number.isFinite(Number(jobs_match_count)) ? Number(jobs_match_count) : null;
         actions = [
@@ -670,15 +865,15 @@ exports.handler = async function handler(event) {
         // all
         actions = [
           { label: 'Pracovní nabídky', url: jobs_url || 'prace.html#hledani' },
-          { label: 'Vzdělání', url: 'vzdelani.html' },
-          { label: 'Kurzy', url: 'kurzy.html' }
+          { label: 'Vzdělání', url: edu_url || 'vzdelani.html#hledani' },
+          { label: 'Kurzy', url: buildCoursesUrl(out?.search || {}) }
         ];
       }
     }
 
     return json(
       200,
-      { ...out, mode, recommendations, edu_recommendations, actions, jobs_match_count, jobs_url },
+      { ...out, mode, intent, recommendations, edu_recommendations, actions, jobs_match_count, jobs_url, edu_match_count, edu_url },
       { 'access-control-allow-origin': '*' }
     );
   } catch (e) {

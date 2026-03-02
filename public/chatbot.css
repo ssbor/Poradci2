@@ -271,6 +271,11 @@
 	box-shadow: 0 8px 18px rgba(6,30,77,.08);
 }
 
+.advisor-mode-badge.is-auto{
+	background: linear-gradient(135deg, rgba(14,165,233,.16) 0%, rgba(139,92,246,.12) 100%);
+	border-color: rgba(99,102,241,.22);
+}
+
 .advisor-mode-badge.is-jobs{
 	background: linear-gradient(135deg, rgba(0,123,255,.18) 0%, rgba(59,130,246,.12) 100%);
 	border-color: rgba(0,123,255,.22);

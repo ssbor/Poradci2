@@ -522,6 +522,24 @@
     const statusEl = document.querySelector('[data-role=skoly-status]');
     const outEl = document.querySelector('[data-role=skoly-results]');
 
+    // URL deep-link support (from advisor): vzdelani.html?q=...&code=...&kraj=Kraj/35...
+    const urlPrefill = (() => {
+      try {
+        const params = new URLSearchParams(String(window.location.search || ''));
+        return {
+          q: String(params.get('q') || '').trim(),
+          code: String(params.get('code') || '').trim(),
+          kraj: String(params.get('kraj') || '').trim(),
+          typ: String(params.get('typ') || '').trim(),
+          druh: String(params.get('druh') || '').trim(),
+          stupen: String(params.get('stupen') || '').trim(),
+          forma: String(params.get('forma') || '').trim()
+        };
+      } catch {
+        return { q: '', code: '', kraj: '', typ: '', druh: '', stupen: '', forma: '' };
+      }
+    })();
+
     if (!statusEl || !outEl) return;
 
     statusEl.textContent = 'Načítám databázi škol…';
@@ -593,6 +611,15 @@
     setSelectOptions(druhEl, buildOptionList(druhOpts, { emptyLabel: 'Všechny druhy' }));
     setSelectOptions(stupenEl, buildOptionList(stupenOpts, { emptyLabel: 'Všechny stupně' }));
     setSelectOptions(formaEl, buildOptionList(formaOpts, { emptyLabel: 'Všechny formy studia' }));
+
+    // Apply URL prefill AFTER options are populated.
+    if (urlPrefill.q && qEl) qEl.value = urlPrefill.q;
+    if (urlPrefill.code && codeEl) codeEl.value = urlPrefill.code;
+    if (urlPrefill.kraj && krajEl) krajEl.value = urlPrefill.kraj;
+    if (urlPrefill.typ && typEl) typEl.value = urlPrefill.typ;
+    if (urlPrefill.druh && druhEl) druhEl.value = urlPrefill.druh;
+    if (urlPrefill.stupen && stupenEl) stupenEl.value = urlPrefill.stupen;
+    if (urlPrefill.forma && formaEl) formaEl.value = urlPrefill.forma;
 
     statusEl.textContent = `Načteno: ${schools.length} škol / ${Number(data?.count_programs || 0)} oborů.`;
 
