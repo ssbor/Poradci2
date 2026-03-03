@@ -86,7 +86,88 @@
 	font-weight: 900;
 	letter-spacing: .2px;
 	color: rgba(14,26,43,.86);
-	margin-bottom: .55rem;
+	margin-bottom: .25rem;
+}
+
+.advisor-sidebar-tabs{
+	display: flex;
+	gap: .35rem;
+	margin: .35rem 0 .55rem 0;
+	flex-wrap: wrap;
+}
+
+.advisor-tab{
+	appearance: none;
+	border: 1px solid rgba(0,0,0,.10);
+	background: rgba(255,255,255,.70);
+	border-radius: 999px;
+	padding: .38rem .65rem;
+	font-weight: 900;
+	font-size: 12px;
+	cursor: pointer;
+	color: rgba(14,26,43,.80);
+}
+
+.advisor-tab:hover{
+	background: rgba(255,255,255,.92);
+}
+
+.advisor-tab.is-active{
+	border-color: rgba(0,123,255,.20);
+	box-shadow: 0 0 0 4px rgba(0,123,255,.10);
+	background: linear-gradient(135deg, rgba(0,123,255,.16) 0%, rgba(99,102,241,.14) 100%);
+}
+
+.advisor-results{
+	display: grid;
+	gap: .55rem;
+}
+
+.advisor-results .muted{
+	font-size: 12px;
+}
+
+.advisor-result-card{
+	border: 1px solid rgba(0,0,0,.08);
+	background: rgba(255,255,255,.78);
+	border-radius: 14px;
+	padding: .6rem .65rem;
+	box-shadow: 0 10px 20px rgba(6,30,77,.06);
+}
+
+.advisor-result-title{
+	font-weight: 900;
+	color: rgba(14,26,43,.92);
+	font-size: 13px;
+	line-height: 1.2;
+}
+
+.advisor-result-meta{
+	margin-top: .25rem;
+	font-size: 12px;
+	color: rgba(14,26,43,.70);
+}
+
+.advisor-result-actions{
+	margin-top: .5rem;
+	display: flex;
+	gap: .45rem;
+	flex-wrap: wrap;
+}
+
+.advisor-link{
+	font-size: 12px;
+	font-weight: 900;
+	text-decoration: none;
+	border: 1px solid rgba(0,0,0,.10);
+	background: rgba(255,255,255,.75);
+	border-radius: 999px;
+	padding: .28rem .55rem;
+	color: rgba(14,26,43,.84);
+}
+
+.advisor-link:hover{
+	background: rgba(255,255,255,.95);
 }
 
 .advisor-history{

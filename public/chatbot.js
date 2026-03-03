@@ -19,6 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
 	const embeddedResetBtn = isEmbedded ? advisorRoot.querySelector('[data-role="advisor-reset"]') : null;
 	const embeddedStarters = null;
 	const embeddedHistory = isEmbedded ? advisorRoot.querySelector('[data-role="advisor-history"]') : null;
+	const embeddedResults = isEmbedded ? advisorRoot.querySelector('[data-role="advisor-results"]') : null;
+	const embeddedTabs = isEmbedded ? Array.from(advisorRoot.querySelectorAll('[data-role="advisor-tab"]')) : [];
 
 	// If neither embedded nor floating markup exists, do nothing.
 	if (!chatMessages || !chatInput || !chatSendButton) return;
@@ -32,7 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		mode: 'auto',
 		// Embedded advisor uses sessions.
 		sessions: [],
-		activeSessionId: null
+		activeSessionId: null,
+		sidebarTab: 'results'
 	};
 
 	const MODE_STORAGE_KEY = 'advisor_mode_v1';
@@ -112,6 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					title: String(s?.title || ''),
 					createdAt: Number(s?.createdAt || 0) || 0,
 					updatedAt: Number(s?.updatedAt || 0) || 0,
+					results: s?.results && typeof s.results === 'object' ? s.results : null,
 					messages: clampSessionMessages(Array.isArray(s?.messages) ? s.messages : []).map((m) => ({
 						role: String(m?.role || ''),
 						content: String(m?.content || ''),
@@ -123,6 +127,116 @@ document.addEventListener('DOMContentLoaded', () => {
 		} catch {
 			// ignore
 		}
+	};
+
+	const setSidebarTab = (tab) => {
+		if (!isEmbedded) return;
+		const t = tab === 'history' ? 'history' : 'results';
+		state.sidebarTab = t;
+		if (embeddedTabs && embeddedTabs.length) {
+			embeddedTabs.forEach((b) => {
+				const on = String(b.getAttribute('data-tab') || '') === t;
+				b.classList.toggle('is-active', on);
+				b.setAttribute('aria-selected', on ? 'true' : 'false');
+			});
+		}
+		if (embeddedHistory) embeddedHistory.hidden = t !== 'history';
+		if (embeddedResults) embeddedResults.hidden = t !== 'results';
+	};
+
+	const packResults = (data) => {
+		const recos = Array.isArray(data?.recommendations) ? data.recommendations.slice(0, 5) : [];
+		const eduRecos = Array.isArray(data?.edu_recommendations) ? data.edu_recommendations.slice(0, 5) : [];
+		return {
+			intent: String(data?.intent || '').trim() || 'general',
+			search: data?.search && typeof data.search === 'object' ? data.search : null,
+			jobs_match_count: data?.jobs_match_count != null ? Number(data.jobs_match_count) : null,
+			jobs_url: String(data?.jobs_url || '').trim(),
+			edu_match_count: data?.edu_match_count != null ? Number(data.edu_match_count) : null,
+			edu_url: String(data?.edu_url || '').trim(),
+			recommendations: recos,
+			edu_recommendations: eduRecos
+		};
+	};
+
+	const renderResults = () => {
+		if (!isEmbedded || !embeddedResults) return;
+		const s = getActiveSession();
+		const r = s?.results && typeof s.results === 'object' ? s.results : null;
+		if (!r) {
+			embeddedResults.innerHTML = '<div class="muted">Výsledky se ukážou tady, až mi napíšeš co hledáš (práce / škola).<br><br>Tip: „Hledám práci automechanik Plzeň“ nebo „Chci nástavbu v Plzeňském kraji“.</div>';
+			return;
+		}
+
+		const intent = String(r?.intent || 'general');
+		const jobsUrl = String(r?.jobs_url || '').trim();
+		const jobsN = r?.jobs_match_count != null ? Number(r.jobs_match_count) : null;
+		const eduUrl = String(r?.edu_url || '').trim();
+		const eduN = r?.edu_match_count != null ? Number(r.edu_match_count) : null;
+		const recos = Array.isArray(r?.recommendations) ? r.recommendations : [];
+		const eduRecos = Array.isArray(r?.edu_recommendations) ? r.edu_recommendations : [];
+
+		let head = '';
+		if (intent === 'jobs') {
+			const label = Number.isFinite(jobsN) && jobsN > 0 ? `Nalezeno: ${jobsN} nabídek` : 'Nabídky práce';
+			head = `<div class="advisor-result-card"><div class="advisor-result-title">${escapeHtml(label)}</div>` +
+				(jobsUrl ? `<div class="advisor-result-actions"><a class="advisor-link" href="${escapeHtml(jobsUrl)}">Otevřít všechny</a></div>` : '') +
+				`</div>`;
+		} else if (intent === 'edu') {
+			const label = Number.isFinite(eduN) && eduN > 0 ? `Nalezeno: ${eduN} škol/oborů` : 'Školy / obory';
+			head = `<div class="advisor-result-card"><div class="advisor-result-title">${escapeHtml(label)}</div>` +
+				(eduUrl ? `<div class="advisor-result-actions"><a class="advisor-link" href="${escapeHtml(eduUrl)}">Otevřít všechny</a></div>` : '') +
+				`</div>`;
+		} else {
+			head = '<div class="muted">Pro obecné dotazy tady nic nelistuji. Napiš, že chceš práci nebo školu, a doplním výsledky.</div>';
+		}
+
+		let body = '';
+		if (intent === 'jobs' && recos.length) {
+			body += recos
+				.map((o) => {
+					const title = escapeHtml(String(o?.profese || ''));
+					const firm = escapeHtml(String(o?.zamestnavatel || ''));
+					const where = escapeHtml(String(o?.lokalita || o?.obec || ''));
+					const wage = escapeHtml(String(o?.mzda_text || ''));
+					const url = offerDetailUrl(o);
+					return (
+						`<div class="advisor-result-card">` +
+						`<div class="advisor-result-title">${title || 'Pozice'}</div>` +
+						(firm ? `<div class="advisor-result-meta">${firm}</div>` : '') +
+						(where ? `<div class="advisor-result-meta">${where}</div>` : '') +
+						(wage ? `<div class="advisor-result-meta">${wage}</div>` : '') +
+						(url ? `<div class="advisor-result-actions"><a class="advisor-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Detail</a></div>` : '') +
+						`</div>`
+					);
+				})
+				.join('');
+		}
+
+		if (intent === 'edu' && eduRecos.length) {
+			body += eduRecos
+				.map((o) => {
+					const school = escapeHtml(String(o?.school_name || ''));
+					const place = escapeHtml(String([o?.obec, o?.kraj].filter(Boolean).join(' · ')));
+					const program = escapeHtml(String(o?.program_name || ''));
+					const code = escapeHtml(String(o?.program_code || ''));
+					const meta = escapeHtml(String([o?.stupen, o?.forma].filter(Boolean).join(' · ')));
+					const urlRaw = String(o?.url || '').trim();
+					const url = urlRaw && !/^https?:\/\//i.test(urlRaw) ? `https://${urlRaw}` : urlRaw;
+					return (
+						`<div class="advisor-result-card">` +
+						`<div class="advisor-result-title">${school || 'Škola'}</div>` +
+						(place ? `<div class="advisor-result-meta">${place}</div>` : '') +
+						(program ? `<div class="advisor-result-meta">${program}${code ? ` <span style=\"opacity:.85\">(${code})</span>` : ''}</div>` : '') +
+						(meta ? `<div class="advisor-result-meta">${meta}</div>` : '') +
+						(url ? `<div class="advisor-result-actions"><a class="advisor-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Web</a></div>` : '') +
+						`</div>`
+					);
+				})
+				.join('');
+		}
+
+		embeddedResults.innerHTML = head + (body ? `<div style="margin-top:.55rem">${body}</div>` : '');
 	};
 
 	const guessTitleFromMessages = (session) => {
@@ -220,6 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		setActiveModeButton(s.mode);
 		renderHistory();
 		renderActiveChat();
+		renderResults();
 		saveSessions();
 	};
 
@@ -429,81 +544,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			const reply = String((data && data.reply) || '').trim();
 			const followUp = data && data.follow_up ? String(data.follow_up).trim() : '';
 			state.lastSearch = data?.search || null;
-			const recos = Array.isArray(data?.recommendations) ? data.recommendations : [];
-			const eduRecos = Array.isArray(data?.edu_recommendations) ? data.edu_recommendations : [];
-			const jobsMatchCount = data?.jobs_match_count != null ? Number(data.jobs_match_count) : null;
-			const jobsUrl = String(data?.jobs_url || '').trim();
-			const eduMatchCount = data?.edu_match_count != null ? Number(data.edu_match_count) : null;
-			const eduUrl = String(data?.edu_url || '').trim();
-
 			let html = escapeHtmlWithBreaks(reply || 'Rozumím.');
-
-			if (recos.length) {
-				html += '<br><br><b>Doporučené nabídky:</b><br>';
-				if (Number.isFinite(jobsMatchCount) && jobsMatchCount > recos.length) {
-					html += `<div style="opacity:.85; margin-top:.25rem">Vybral jsem top ${Math.min(5, recos.length)} z ${jobsMatchCount} nabídek.</div>`;
-				}
-				html += '<div style="display:grid; gap:.45rem; margin-top:.35rem">';
-				for (const r of recos.slice(0, 5)) {
-					const title = escapeHtml(String(r?.profese || ''));
-					const firm = escapeHtml(String(r?.zamestnavatel || ''));
-					const where = escapeHtml(String(r?.lokalita || r?.obec || ''));
-					const wage = escapeHtml(String(r?.mzda_text || ''));
-					const url = offerDetailUrl(r);
-					html += '<div style="border:1px solid rgba(255,255,255,.12); padding:.45rem .55rem; border-radius:.6rem">';
-					html += `<div style="font-weight:700">${title || 'Pozice'}</div>`;
-					if (firm) html += `<div style="opacity:.92">${firm}</div>`;
-					if (where) html += `<div style="opacity:.85">${where}</div>`;
-					if (wage) html += `<div style="opacity:.85">${wage}</div>`;
-					if (url) html += `<div style="margin-top:.2rem"><a href="${url}" target="_blank" rel="noopener noreferrer">Otevřít na ÚP</a></div>`;
-					html += '</div>';
-				}
-				html += '</div>';
-			}
-
-			// If we have a broad jobs match count but no top picks (e.g., strict scoring), still show a helpful summary.
-			if (!recos.length && Number.isFinite(jobsMatchCount) && jobsMatchCount > 0) {
-				html += `<br><br><div style="opacity:.9"><b>Našel jsem</b> ${jobsMatchCount} nabídek podle toho, co píšeš.</div>`;
-				if (jobsUrl) {
-					html += `<div style="margin-top:.25rem"><a href="${escapeHtml(jobsUrl)}">Zobrazit nabídky</a></div>`;
-				}
-			}
-
-			if (eduRecos.length) {
-				html += '<br><br><b>Doporučené školy / obory:</b><br>';
-				if (Number.isFinite(eduMatchCount) && eduMatchCount > eduRecos.length) {
-					html += `<div style="opacity:.85; margin-top:.25rem">Vybral jsem top ${Math.min(5, eduRecos.length)} z ${eduMatchCount} škol.</div>`;
-				}
-				html += '<div style="display:grid; gap:.45rem; margin-top:.35rem">';
-				for (const r of eduRecos.slice(0, 5)) {
-					const school = escapeHtml(String(r?.school_name || ''));
-					const place = escapeHtml(String([r?.obec, r?.kraj].filter(Boolean).join(' · ')));
-					const program = escapeHtml(String(r?.program_name || ''));
-					const code = escapeHtml(String(r?.program_code || ''));
-					const forma = escapeHtml(String(r?.forma || ''));
-					const stupen = escapeHtml(String(r?.stupen || ''));
-					const urlRaw = String(r?.url || '').trim();
-					const url = urlRaw && !/^https?:\/\//i.test(urlRaw) ? `https://${urlRaw}` : urlRaw;
-
-					html += '<div style="border:1px solid rgba(255,255,255,.12); padding:.45rem .55rem; border-radius:.6rem">';
-					html += `<div style="font-weight:700">${school || 'Škola'}</div>`;
-					if (place) html += `<div style="opacity:.9">${place}</div>`;
-					if (program) html += `<div style="margin-top:.2rem">${program}${code ? ` <span style=\"opacity:.85\">(${code})</span>` : ''}</div>`;
-					const meta = [stupen, forma].filter(Boolean).join(' · ');
-					if (meta) html += `<div style="opacity:.85">${meta}</div>`;
-					if (url) html += `<div style="margin-top:.2rem"><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Web školy</a></div>`;
-					html += '</div>';
-				}
-				html += '</div>';
-			}
-
-			// If we have edu matches but no top picks, still show a helpful summary.
-			if (!eduRecos.length && Number.isFinite(eduMatchCount) && eduMatchCount > 0) {
-				html += `<br><br><div style="opacity:.9"><b>Našel jsem</b> ${eduMatchCount} škol podle toho, co píšeš.</div>`;
-				if (eduUrl) {
-					html += `<div style="margin-top:.25rem"><a href="${escapeHtml(eduUrl)}">Zobrazit školy</a></div>`;
-				}
-			}
 
 			const actions = Array.isArray(data?.actions) ? data.actions : [];
 			if (actions.length) {
@@ -517,6 +558,21 @@ document.addEventListener('DOMContentLoaded', () => {
 				html += '</div>';
 			}
 			if (followUp) html += '<br><br>' + escapeHtmlWithBreaks(followUp);
+
+			// Embedded: store & render results into sidebar (instead of inside chat bubble).
+			if (isEmbedded) {
+				const s = getActiveSession();
+				if (s) {
+					s.results = packResults(data);
+					s.updatedAt = nowTs();
+					renderResults();
+					// Auto-switch to results tab when we have job/edu results.
+					const it = String(s.results?.intent || '');
+					const hasJobs = (it === 'jobs') && ((Number(s.results?.jobs_match_count || 0) > 0) || (Array.isArray(s.results?.recommendations) && s.results.recommendations.length));
+					const hasEdu = (it === 'edu') && ((Number(s.results?.edu_match_count || 0) > 0) || (Array.isArray(s.results?.edu_recommendations) && s.results.edu_recommendations.length));
+					if (hasJobs || hasEdu) setSidebarTab('results');
+				}
+			}
 
 			addMessageToChat(html, 'bot', { html: true });
 			if (isEmbedded) {
@@ -605,6 +661,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		setActiveModeButton(getMode());
 		renderHistory();
 		renderActiveChat();
+		renderResults();
+		setSidebarTab(state.sidebarTab);
 
 		if (embeddedResetBtn) {
 			embeddedResetBtn.addEventListener('click', (e) => {
@@ -617,6 +675,13 @@ document.addEventListener('DOMContentLoaded', () => {
 			const t = e.target;
 			if (!(t instanceof Element)) return;
 
+			const tabBtn = t.closest('[data-role="advisor-tab"]');
+			if (tabBtn) {
+				e.preventDefault();
+				setSidebarTab(String(tabBtn.getAttribute('data-tab') || 'results'));
+				return;
+			}
+
 			const del = t.closest('[data-role="advisor-history-delete"]');
 			if (del) {
 				e.preventDefault();
@@ -625,6 +690,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					deleteSession(id);
 					renderHistory();
 					renderActiveChat();
+					renderResults();
 					applyEmbeddedCopy();
 					setActiveModeButton(getMode());
 				}

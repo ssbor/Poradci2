@@ -117,8 +117,15 @@
     <div class="card advisor-card" data-role="advisor-root" style="margin-top: 1rem">
       <div class="advisor-shell">
         <aside class="advisor-sidebar" aria-label="Historie chatů">
-          <div class="advisor-sidebar-title">Historie</div>
-          <div class="advisor-history" data-role="advisor-history" aria-label="Seznam chatů"></div>
+          <div class="advisor-sidebar-top">
+            <div class="advisor-sidebar-title">Panel</div>
+            <div class="advisor-sidebar-tabs" role="tablist" aria-label="Panel poradce">
+              <button type="button" class="advisor-tab is-active" data-role="advisor-tab" data-tab="results" role="tab" aria-selected="true">Výsledky</button>
+              <button type="button" class="advisor-tab" data-role="advisor-tab" data-tab="history" role="tab" aria-selected="false">Historie</button>
+            </div>
+          </div>
+          <div class="advisor-results" data-role="advisor-results" aria-label="Výsledky"></div>
+          <div class="advisor-history" data-role="advisor-history" aria-label="Seznam chatů" hidden></div>
         </aside>
 
         <div class="advisor-main">

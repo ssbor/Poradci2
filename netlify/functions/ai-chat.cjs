@@ -714,6 +714,7 @@ exports.handler = async function handler(event) {
       '- edu: doptávej se na úroveň (výuční list/maturita/VOŠ/VŠ), obor, kraj/město, formu (denní/dálková/kombinovaná), a zda jde o nástavbu nebo změnu oboru. ' +
       '- courses: doptávej se na cíl (rekvalifikace vs doplnění), časové možnosti, rozpočet a lokalitu/online. ' +
       'U obecného Q&A buď užitečný: když se uživatel ptá na cenu dopravy / bydlení / život v lokalitě, dej rozumný hrubý odhad a postup výpočtu, ale jasně řekni, že nemáš přístup k aktuálním ceníkům a že přesnou cenu je potřeba ověřit. Doptávej se na chybějící údaje (odkud–kam, způsob dopravy, počet dní v týdnu, nájem vs spolubydlení, velikost bytu, město). ' +
+      'Piš STRUČNĚ: reply má být krátký (ideálně 2–4 věty, max ~450 znaků), bez dlouhých odstavců. Nepiš seznamy nabídek/škol do reply – konkrétní výsledky patří do recommendations/edu_recommendations a do odkazů. V reply se soustřeď na poradenství a další otázku (follow_up). ' +
       'Důležité: nepřepínej stránku ani nenařizuj proklik; jen konverzuj a doptávej se. ' +
       'Vždy odpovídej ČESKY. ' +
       'V odpovědi vrať POUZE JSON objekt (bez markdownu). ' +
@@ -755,6 +756,7 @@ exports.handler = async function handler(event) {
         body: JSON.stringify({
           model: DEFAULT_OPENAI_MODEL,
           temperature: 0.2,
+          max_tokens: 450,
           response_format: { type: 'json_object' },
           messages: reqMessages
         })
@@ -801,6 +803,7 @@ exports.handler = async function handler(event) {
           contents,
           generationConfig: {
             temperature: 0.2,
+            maxOutputTokens: 450,
             responseMimeType: 'application/json'
           }
         })
