@@ -1285,11 +1285,6 @@ exports.handler = async function handler(event) {
       }
     }
 
-    // Optional: a stable landing page the user can open after agreeing on what to search.
-    if (okToShowActions && (jobs_url || edu_url) && actions.length) {
-      actions = [{ label: 'Přehled výsledků', url: 'vysledky.html' }, ...actions].slice(0, 4);
-    }
-
     return json(
       200,
       { ...out, mode, intent, search: normalizedSearch || out?.search || null, recommendations, edu_recommendations, actions, jobs_match_count, jobs_url, edu_match_count, edu_url },
