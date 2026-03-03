@@ -432,6 +432,40 @@ function offerText(o) {
   );
 }
 
+function expandJobTokens(tokens) {
+  const t = Array.isArray(tokens) ? tokens.map((x) => String(x || '').trim()).filter(Boolean) : [];
+  const out = [...t];
+  const has = new Set(out);
+
+  // Common shorthand users mention, but data may contain different wording.
+  if (has.has('co2')) {
+    for (const x of ['mig', 'mag']) {
+      if (!has.has(x)) {
+        has.add(x);
+        out.push(x);
+      }
+    }
+  }
+
+  return Array.from(new Set(out)).slice(0, 16);
+}
+
+function offerMatchesPlace(o, placeNorm) {
+  const p = String(placeNorm || '').trim();
+  if (!p) return true;
+
+  const obec = normalizeText(o?.obec || '');
+  const okres = normalizeText(o?.okres || '');
+  const lokalita = normalizeText(o?.lokalita || '');
+
+  if (obec && (obec === p || obec.startsWith(p) || p.startsWith(obec) || obec.includes(p) || p.includes(obec))) return true;
+  if (okres && (okres === p || okres.includes(p) || p.includes(okres))) return true;
+
+  // Last resort: address string (can include the city).
+  if (lokalita && p.length >= 3 && lokalita.includes(p)) return true;
+  return false;
+}
+
 function offerDetailUrl(o) {
   const direct = String(o?.url_adresa ?? o?.urlAdresa ?? o?.url ?? o?.detail_url ?? '').trim();
   if (/^https?:\/\//i.test(direct)) return direct;
@@ -666,12 +700,20 @@ function countMatchingSchools(schools, search) {
 function recommendOffers(offers, search) {
   const q = String(search?.q || '').trim();
   const kraj = String(search?.kraj || '').trim();
+  const place = String(search?.place || '').trim();
+  const placeN = normalizeText(place);
   const minMzda = search?.minMzda != null ? Number(search.minMzda) : 0;
-  const tokens = tokensFromQuery(q);
+  const relaxed = Boolean(search?.__relaxed);
+
+  const tokensBase = tokensFromQuery(q);
+  const tokens = expandJobTokens(tokensBase);
 
   const out = [];
   for (const o of offers) {
     if (kraj && String(o?.kraj || '').trim() !== kraj) continue;
+
+    // City-level filtering (server-side). Precise radius filtering happens in prace.html.
+    if (placeN && !offerMatchesPlace(o, placeN)) continue;
 
     if (minMzda) {
       const a = o?.mzda_od != null ? Number(o.mzda_od) : null;
@@ -696,12 +738,17 @@ function recommendOffers(offers, search) {
 
     if (comparableDateKey(o?.datum_zmeny || o?.datum_vlozeni)) score += 1;
 
+    // If the user provided only location/wage filters, allow matches even without text tokens.
+    if (!tokens.length) {
+      score = Math.max(score, 1);
+    }
+
     if (score <= 0) continue;
     out.push({ o, score });
   }
 
   out.sort((x, y) => y.score - x.score || comparableDateKey(y.o?.datum_zmeny) - comparableDateKey(x.o?.datum_zmeny));
-  return out.slice(0, 5).map(({ o }) => ({
+  const top = out.slice(0, 5).map(({ o }) => ({
     profese: String(o?.profese || ''),
     zamestnavatel: String(o?.zamestnavatel || ''),
     obec: String(o?.obec || ''),
@@ -713,20 +760,33 @@ function recommendOffers(offers, search) {
     portal_id: o?.portal_id ?? null,
     url_adresa: offerDetailUrl(o)
   }));
+
+  // Fallback: if a too-specific query yields nothing but we do have a place filter,
+  // show at least the newest offers in that place so results don't "disappear".
+  if (!top.length && placeN && !relaxed && q) {
+    const relaxedSearch = { ...(search || {}), q: '', __relaxed: true };
+    return recommendOffers(offers, relaxedSearch);
+  }
+
+  return top;
 }
 
 function countMatchingOffers(offers, search) {
   const q = String(search?.q || '').trim();
   const kraj = String(search?.kraj || '').trim();
+  const place = String(search?.place || '').trim();
+  const placeN = normalizeText(place);
   const minMzda = search?.minMzda != null ? Number(search.minMzda) : 0;
-  const tokens = tokensFromQuery(q);
+  const tokens = expandJobTokens(tokensFromQuery(q));
 
   // If nothing to filter by, don't claim we found "everything".
-  if (!tokens.length && !kraj && !minMzda) return 0;
+  if (!tokens.length && !kraj && !minMzda && !placeN) return 0;
 
   let n = 0;
   for (const o of offers) {
     if (kraj && String(o?.kraj || '').trim() !== kraj) continue;
+
+    if (placeN && !offerMatchesPlace(o, placeN)) continue;
 
     if (minMzda) {
       const a = o?.mzda_od != null ? Number(o.mzda_od) : null;
@@ -751,6 +811,12 @@ function countMatchingOffers(offers, search) {
     }
     if (score > 0) n += 1;
   }
+
+  // If text tokens were too strict but location/wage filters exist, allow place-only count.
+  if (n === 0 && placeN && tokens.length && q) {
+    return countMatchingOffers(offers, { ...(search || {}), q: '', __relaxed: true });
+  }
+
   return n;
 }
 
