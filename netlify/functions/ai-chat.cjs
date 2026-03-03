@@ -44,7 +44,7 @@ function inferIntentFromText(raw) {
 
   // Order matters: courses/edu keywords can overlap with general career questions.
   if (/(\bkurz\b|rekvalifik|certifik|osvedcen|skolen)/i.test(t)) return 'courses';
-  if (/(\bskol\b|\bobor\b|maturit|nastavb|vos\b|vs\b|prihlask|ucen|vyuc|stud)/i.test(t)) return 'edu';
+  if (/(\bskol\b|\bobor\b|maturit|nastavb|\bvos\b|\bvs\b|vysok|univerzit|fakult|prihlask|ucen|vyuc|stud)/i.test(t)) return 'edu';
   if (/(\bprace\b|zamestnan|\bmzda\b|\bpozic\b|nabidk|brigad|uvazek|pohovor|zivotopis|cv\b)/i.test(t)) return 'jobs';
   return '';
 }
@@ -341,7 +341,7 @@ function recommendSchools(schools, search) {
   const tokens = tokensFromQuery(q);
   const krajId = String(search?.krajId || '').trim();
   const nuts3 = String(search?.nuts3 || '').trim() || (String(search?.kraj || '').trim().startsWith('CZ') ? String(search?.kraj || '').trim() : '');
-  const codeLike = normalizeProgramCode(qRaw);
+  const codeLike = normalizeProgramCode(search?.code || '') || normalizeProgramCode(qRaw);
 
   if (!tokens.length && !codeLike) return [];
 

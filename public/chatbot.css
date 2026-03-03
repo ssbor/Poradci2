@@ -70,6 +70,7 @@
 .advisor-shell{
 	display: flex;
 	gap: .9rem;
+	align-items: stretch;
 }
 
 .advisor-sidebar{
@@ -80,6 +81,13 @@
 	border: 1px solid rgba(0,0,0,.07);
 	background: rgba(255,255,255,.60);
 	backdrop-filter: blur(10px);
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.advisor-sidebar-top{
+	flex: 0 0 auto;
 }
 
 .advisor-sidebar-title{
@@ -173,6 +181,34 @@
 .advisor-history{
 	display: grid;
 	gap: .45rem;
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow: auto;
+	padding-right: .2rem;
+}
+
+.advisor-results{
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow: auto;
+	padding-right: .2rem;
+}
+
+@media (min-width: 900px){
+	.advisor-shell{
+		height: min(680px, 78vh);
+	}
+	.advisor-chat{
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+	}
+	.advisor-chat .chat-messages{
+		flex: 1 1 auto;
+		min-height: 0;
+		max-height: none;
+		overflow: auto;
+	}
 }
 
 .advisor-history-item{

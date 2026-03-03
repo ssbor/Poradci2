@@ -144,6 +144,12 @@ document.addEventListener('DOMContentLoaded', () => {
 		if (embeddedResults) embeddedResults.hidden = t !== 'results';
 	};
 
+	const setTabLabel = (tab, text) => {
+		if (!isEmbedded || !embeddedTabs || !embeddedTabs.length) return;
+		const btn = embeddedTabs.find((b) => String(b.getAttribute('data-tab') || '') === tab);
+		if (btn) btn.textContent = text;
+	};
+
 	const packResults = (data) => {
 		const recos = Array.isArray(data?.recommendations) ? data.recommendations.slice(0, 5) : [];
 		const eduRecos = Array.isArray(data?.edu_recommendations) ? data.edu_recommendations.slice(0, 5) : [];
@@ -164,6 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		const s = getActiveSession();
 		const r = s?.results && typeof s.results === 'object' ? s.results : null;
 		if (!r) {
+			setTabLabel('results', 'Výsledky');
 			embeddedResults.innerHTML = '<div class="muted">Výsledky se ukážou tady, až mi napíšeš co hledáš (práce / škola).<br><br>Tip: „Hledám práci automechanik Plzeň“ nebo „Chci nástavbu v Plzeňském kraji“.</div>';
 			return;
 		}
@@ -175,6 +182,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		const eduN = r?.edu_match_count != null ? Number(r.edu_match_count) : null;
 		const recos = Array.isArray(r?.recommendations) ? r.recommendations : [];
 		const eduRecos = Array.isArray(r?.edu_recommendations) ? r.edu_recommendations : [];
+		const shownCount = (intent === 'jobs' ? recos.length : intent === 'edu' ? eduRecos.length : 0);
+		setTabLabel('results', shownCount ? `Výsledky (${shownCount})` : 'Výsledky');
 
 		let head = '';
 		if (intent === 'jobs') {
