@@ -49,6 +49,23 @@ jobs:
       - name: Build JSON shards
         run: npm run build
 
+      - name: Deploy to Netlify (prod)
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: |
+          if [ -z "$NETLIFY_AUTH_TOKEN" ] || [ -z "$NETLIFY_SITE_ID" ]; then
+            echo "NETLIFY_AUTH_TOKEN/NETLIFY_SITE_ID secrets are not set; skipping Netlify deploy."
+            exit 0
+          fi
+          npx -y netlify-cli@latest deploy \
+            --prod \
+            --dir=public \
+            --functions=netlify/functions \
+            --site "$NETLIFY_SITE_ID" \
+            --auth "$NETLIFY_AUTH_TOKEN" \
+            --message "Daily data build ${GITHUB_SHA}"
+
       - name: Upload artifact (public/)
         uses: actions/upload-pages-artifact@v3
         with:
