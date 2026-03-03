@@ -33,6 +33,92 @@ let SCHOOLS_CACHE = {
   schools: null
 };
 
+let PLACES_CACHE = {
+  at: 0,
+  built_at: '',
+  items: null,
+  index: null
+};
+
+const STOP_WORDS = new Set([
+  'a',
+  'i',
+  'ne',
+  'ze',
+  'se',
+  'si',
+  'ja',
+  'ty',
+  'on',
+  'ona',
+  'to',
+  'ten',
+  'ta',
+  'tohle',
+  'tahle',
+  'toto',
+  'mi',
+  'me',
+  'mne',
+  'muj',
+  'moje',
+  'moji',
+  'nas',
+  'v',
+  've',
+  'na',
+  'do',
+  'od',
+  'pro',
+  'po',
+  'u',
+  'z',
+  'za',
+  'k',
+  'ke',
+  'bez',
+  'o',
+  'co',
+  'jak',
+  'kde',
+  'kdy',
+  'kolik',
+  'proc',
+  'proto',
+  'chci',
+  'chtel',
+  'chtela',
+  'hledam',
+  'hledat',
+  'potrebuju',
+  'potrebuji',
+  'zajima',
+  'zajimalo',
+  'porad',
+  'jen',
+  'taky',
+  'asi',
+  'jako',
+  'aby',
+  'bych',
+  'by',
+  'byt',
+  'bydleni',
+  'ziti',
+  // Jobs-specific generic terms we don't want to treat as a "role" token.
+  'prace',
+  'praci',
+  'pozice',
+  'nabidka',
+  'nabidky',
+  'zamestnani',
+  'brigada',
+  'brigadu',
+  'uvazek',
+  'plny',
+  'castecny'
+]);
+
 function normalizeIntent(raw) {
   const v = String(raw || '').trim().toLowerCase();
   return ['jobs', 'edu', 'courses', 'general'].includes(v) ? v : '';
@@ -107,80 +193,210 @@ function normalizeText(s) {
 }
 
 function tokensFromQuery(q) {
-  const stop = new Set([
-    'a',
-    'i',
-    'ne',
-    'ze',
-    'se',
-    'si',
-    'ja',
-    'ty',
-    'on',
-    'ona',
-    'to',
-    'ten',
-    'ta',
-    'tohle',
-    'tahle',
-    'toto',
-    'mi',
-    'me',
-    'mne',
-    'muj',
-    'moje',
-    'moji',
-    'nas',
-    'v',
-    've',
-    'na',
-    'do',
-    'od',
-    'pro',
-    'po',
-    'u',
-    'z',
-    'za',
-    'k',
-    'ke',
-    'bez',
-    'o',
-    'co',
-    'jak',
-    'kde',
-    'kdy',
-    'kolik',
-    'proc',
-    'proto',
-    'chci',
-    'chtel',
-    'chtela',
-    'hledam',
-    'hledat',
-    'potrebuju',
-    'potrebuji',
-    'zajima',
-    'zajimalo',
-    'porad',
-    'jen',
-    'taky',
-    'asi',
-    'jako',
-    'aby',
-    'bych',
-    'by',
-    'byt',
-    'bydleni',
-    'ziti'
-  ]);
   const t = normalizeText(q)
     .split(/[\s,]+/g)
     .map((x) => x.trim())
     .filter(Boolean)
     .filter((x) => x.length >= 2);
 
-  const filtered = t.filter((x) => !stop.has(x));
+  const filtered = t.filter((x) => !STOP_WORDS.has(x));
   return Array.from(new Set(filtered.length ? filtered : t)).slice(0, 12);
+}
+
+function placeNorm(s) {
+  return normalizeText(s)
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function consonantKey(s) {
+  const n = placeNorm(s);
+  return n.replace(/[aeiouy]/g, '').replace(/\s+/g, '').trim();
+}
+
+function pickBetterPlace(a, b, { krajHint } = {}) {
+  if (!a) return b;
+  if (!b) return a;
+  const ak = String(a?.kraj || '').trim();
+  const bk = String(b?.kraj || '').trim();
+  const hint = String(krajHint || '').trim();
+  const aObec = String(a?.t || '') === 'obec' ? 1 : 0;
+  const bObec = String(b?.t || '') === 'obec' ? 1 : 0;
+  const aHint = hint && ak === hint ? 1 : 0;
+  const bHint = hint && bk === hint ? 1 : 0;
+  if (aHint !== bHint) return aHint > bHint ? a : b;
+  if (aObec !== bObec) return aObec > bObec ? a : b;
+  return String(a?.name || '').length <= String(b?.name || '').length ? a : b;
+}
+
+function buildPlacesIndex(items) {
+  const byName = new Map();
+  const bySk = new Map();
+
+  for (const it of items || []) {
+    const name = String(it?.name || '').trim();
+    if (!name) continue;
+    const nn = placeNorm(name);
+    if (!nn) continue;
+    const sk = consonantKey(nn);
+    const rec = { ...it, __nn: nn, __sk: sk };
+
+    const prevByName = byName.get(nn);
+    byName.set(nn, pickBetterPlace(prevByName, rec));
+
+    if (sk) {
+      const arr = bySk.get(sk) || [];
+      arr.push(rec);
+      bySk.set(sk, arr);
+    }
+  }
+
+  return { byName, bySk };
+}
+
+async function loadPlacesFromSite(event) {
+  const now = Date.now();
+  if (PLACES_CACHE.items && PLACES_CACHE.index && now - PLACES_CACHE.at < 60 * 60 * 1000) return PLACES_CACHE;
+
+  const proto = String(event?.headers?.['x-forwarded-proto'] || 'https');
+  const host = String(event?.headers?.host || '').trim();
+  if (!host) return PLACES_CACHE;
+  const base = `${proto}://${host}`;
+
+  try {
+    const resp = await fetch(`${base}/data/obce_suggest.json`, {
+      headers: { 'cache-control': 'no-cache' }
+    });
+    if (!resp.ok) return PLACES_CACHE;
+    const data = await resp.json();
+    const items = Array.isArray(data?.items) ? data.items : [];
+    const built_at = String(data?.built_at || '');
+    PLACES_CACHE = {
+      at: now,
+      built_at,
+      items,
+      index: buildPlacesIndex(items)
+    };
+    return PLACES_CACHE;
+  } catch {
+    return PLACES_CACHE;
+  }
+}
+
+function inferPlaceFromTextUsingIndex(rawText, index, { krajHint } = {}) {
+  if (!index) return null;
+  const txt = placeNorm(rawText);
+  if (!txt) return null;
+
+  const tokens = txt.split(' ').filter(Boolean);
+  if (!tokens.length) return null;
+
+  const seen = new Set();
+  let best = null;
+  let bestScore = 0;
+
+  // Try 3-grams → 1-grams (multi-word places first).
+  for (let i = 0; i < tokens.length; i++) {
+    for (let len = 3; len >= 1; len--) {
+      const phrase = tokens.slice(i, i + len).join(' ').trim();
+      if (phrase.length < 2) continue;
+      if (seen.has(phrase)) continue;
+      seen.add(phrase);
+
+      const nn = placeNorm(phrase);
+      if (!nn) continue;
+
+      const exact = index.byName.get(nn) || null;
+      if (exact) {
+        let score = 100;
+        if (krajHint && String(exact?.kraj || '').trim() === String(krajHint || '').trim()) score += 4;
+        if (String(exact?.t || '') === 'obec') score += 2;
+        if (score > bestScore) {
+          bestScore = score;
+          best = exact;
+        }
+        continue;
+      }
+
+      const sk = consonantKey(nn);
+      if (!sk || sk.length < 3) continue;
+      const list = index.bySk.get(sk) || [];
+      if (!list.length) continue;
+
+      let picked = null;
+      for (const it of list) {
+        picked = pickBetterPlace(picked, it, { krajHint });
+      }
+
+      if (picked) {
+        let score = 60;
+        if (krajHint && String(picked?.kraj || '').trim() === String(krajHint || '').trim()) score += 4;
+        if (String(picked?.t || '') === 'obec') score += 2;
+        // Prefer longer phrases (more specific) when matched.
+        score += Math.min(6, len);
+        if (score > bestScore) {
+          bestScore = score;
+          best = picked;
+        }
+      }
+    }
+  }
+
+  return best;
+}
+
+function deriveJobQueryExcludingPlace(rawText, placeName) {
+  const txt = normalizeText(rawText);
+  if (!txt) return '';
+
+  const placeTokens = placeNorm(placeName).split(' ').filter(Boolean);
+  const placeSk = new Set(placeTokens.map((t) => consonantKey(t)).filter(Boolean));
+
+  const tokens = txt
+    .split(/[\s,]+/g)
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .filter((x) => x.length >= 2)
+    .filter((x) => !STOP_WORDS.has(x));
+
+  const kept = tokens.filter((t) => {
+    const sk = consonantKey(t);
+    return sk && !placeSk.has(sk);
+  });
+
+  return kept.slice(0, 8).join(' ').trim();
+}
+
+async function augmentJobsSearch(event, search, lastUserMsg) {
+  const next = search && typeof search === 'object' ? { ...search } : {};
+  const krajHint = String(next?.kraj || '').trim();
+
+  let place = String(next?.place || '').trim();
+  if (!place) {
+    const cache = await loadPlacesFromSite(event);
+    const idx = cache?.index || null;
+    const inferred = inferPlaceFromTextUsingIndex(lastUserMsg, idx, { krajHint });
+    if (inferred?.name) {
+      place = String(inferred.name).trim();
+      if (place) next.place = place;
+    }
+  }
+
+  // Default distance: place-only filtering on prace.html needs km to do anything.
+  if (place) {
+    const km = next?.dojezdKm != null ? Number(next.dojezdKm) : 0;
+    if (!Number.isFinite(km) || km <= 0) next.dojezdKm = 5;
+  }
+
+  // If query likely contains a location ("v Plzni"), remove it to avoid killing text matching.
+  const q = String(next?.q || '').trim();
+  if (place && q) {
+    const derived = deriveJobQueryExcludingPlace(q, place);
+    if (derived && derived.length >= 2) next.q = derived;
+  }
+
+  return next;
 }
 
 function normalizeProgramCode(s) {
@@ -544,7 +760,8 @@ function buildJobsUrl(search) {
   const kraj = String(search?.kraj || '').trim();
   const place = String(search?.place || '').trim();
   const minMzda = search?.minMzda != null ? Number(search.minMzda) : 0;
-  const dojezdKm = search?.dojezdKm != null ? Number(search.dojezdKm) : 0;
+  const dojezdKmRaw = search?.dojezdKm != null ? Number(search.dojezdKm) : 0;
+  const dojezdKm = dojezdKmRaw || (place ? 5 : 0);
 
   if (q) params.set('q', q);
   if (kraj) params.set('kraj', kraj);
@@ -732,11 +949,11 @@ exports.handler = async function handler(event) {
       'Režim je daný polem mode: auto (automaticky), all (vše), jobs (pracovní nabídky), edu (vzdělání/školy), courses (kurzy). ' +
       'Pokud je mode=auto, SÁM rozpoznej téma a nastav intent. Přitom pořád umíš odpovědět na jakýkoli dotaz (general Q&A). ' +
       'Chovej se jako SPECIALISTA podle zvoleného intent/módu: ' +
-      '- jobs: doptávej se na lokalitu (město/kraj), dojezd, mzdu, úvazek, praxi, dovednosti. ' +
+      '- jobs: když už máš aspoň něco k filtrování (profese/dovednost/město/kraj/mzda), nejdřív dej best-effort výsledky (a vyplň search), a teprve pak polož maximálně 1 doplňující otázku. Nečekej na všechny filtry. ' +
       '- edu: doptávej se na úroveň (výuční list/maturita/VOŠ/VŠ), obor, kraj/město, formu (denní/dálková/kombinovaná), a zda jde o nástavbu nebo změnu oboru. ' +
       '- courses: doptávej se na cíl (rekvalifikace vs doplnění), časové možnosti, rozpočet a lokalitu/online. ' +
       'U obecného Q&A buď užitečný: když se uživatel ptá na cenu dopravy / bydlení / život v lokalitě, dej rozumný hrubý odhad a postup výpočtu, ale jasně řekni, že nemáš přístup k aktuálním ceníkům a že přesnou cenu je potřeba ověřit. Doptávej se na chybějící údaje (odkud–kam, způsob dopravy, počet dní v týdnu, nájem vs spolubydlení, velikost bytu, město). ' +
-      'Piš STRUČNĚ: reply má být krátký (ideálně 2–4 věty, max ~450 znaků), bez dlouhých odstavců. Nepiš seznamy nabídek/škol do reply – konkrétní výsledky patří do recommendations/edu_recommendations a do odkazů. V reply se soustřeď na poradenství a další otázku (follow_up). ' +
+      'Piš STRUČNĚ: reply má být krátký (ideálně 2–4 věty, max ~450 znaků), bez dlouhých odstavců. Nepiš seznamy nabídek/škol do reply – konkrétní výsledky patří do recommendations/edu_recommendations a do odkazů. V reply se soustřeď na poradenství; follow_up buď null, nebo jen 1 krátká otázka. ' +
       'Důležité: nepřepínej stránku ani nenařizuj proklik; jen konverzuj a doptávej se. ' +
       'Vždy odpovídej ČESKY. ' +
       'V odpovědi vrať POUZE JSON objekt (bez markdownu). ' +
@@ -892,7 +1109,14 @@ exports.handler = async function handler(event) {
     const intentFromMode = mode === 'jobs' ? 'jobs' : mode === 'edu' ? 'edu' : mode === 'courses' ? 'courses' : '';
     const intent = mode === 'auto' ? (outIntent || inferredIntent || 'general') : outIntent || intentFromMode || '';
 
-    const normalizedSearch = mode === 'auto' ? normalizeSearchForAuto(out?.search, { intent, lastUserMsg }) : (out?.search || null);
+    let normalizedSearch = mode === 'auto' ? normalizeSearchForAuto(out?.search, { intent, lastUserMsg }) : (out?.search || null);
+    if ((mode === 'jobs' || (mode === 'auto' && intent === 'jobs')) && normalizedSearch) {
+      try {
+        normalizedSearch = await augmentJobsSearch(event, normalizedSearch, lastUserMsg);
+      } catch {
+        // ignore place inference errors
+      }
+    }
 
     let recommendations = [];
     let edu_recommendations = [];
@@ -944,10 +1168,10 @@ exports.handler = async function handler(event) {
       // ignore edu recommendations errors
     }
 
-    const anySearch = hasAnySearch(out?.search);
+    const anySearch = hasAnySearch(normalizedSearch || out?.search);
 
-    // UX: show redirect actions only once the assistant is not asking more questions.
-    const okToShowActions = !followUpTxt && (mode !== 'jobs' || anySearch);
+    // UX: actions/results should be available even if a follow-up question is asked.
+    const okToShowActions = mode !== 'jobs' || anySearch;
 
     if (okToShowActions) {
       if (mode === 'auto') {
