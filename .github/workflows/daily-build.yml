@@ -5,14 +5,6 @@ on:
     - cron: "7 3 * * *"   # 03:07 UTC (~04/05:07 v ČR) každý den
   workflow_dispatch: {}
 
-# Prevent concurrent Pages deployments (deploy-pages API rejects when one is already in progress).
-concurrency:
-  group: "pages-deploy"
-  # IMPORTANT: do not cancel in-progress runs during deploy.
-  # Cancelling deploy-pages mid-flight can leave a Pages deployment stuck as "in progress",
-  # which then blocks all subsequent deployments with HTTP 400.
-  cancel-in-progress: false
-
 
 jobs:
   build:

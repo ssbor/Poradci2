@@ -7,3 +7,9 @@
 
 [build.environment]
   NODE_VERSION = "20"
+
+[[headers]]
+  for = "/data/*"
+  [headers.values]
+    # Data shards are rebuilt daily; avoid long-lived CDN caching that would show stale results.
+    Cache-Control = "public, max-age=300, must-revalidate"
