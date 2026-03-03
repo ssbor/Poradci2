@@ -452,7 +452,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		const kraj = String(search?.kraj || '').trim();
 		const place = String(search?.place || '').trim();
 		const minMzda = Number(search?.minMzda || 0) || 0;
-		const dojezdKm = Number(search?.dojezdKm || 0) || 0;
+		const dojezdKmRaw = Number(search?.dojezdKm || 0) || 0;
+		const dojezdKm = dojezdKmRaw || (place ? 5 : 0);
 
 		if (q) params.set('q', q);
 		if (kraj) params.set('kraj', kraj);

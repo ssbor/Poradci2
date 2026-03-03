@@ -1275,10 +1275,60 @@
       close();
     });
 
+    function findBestMatch(rawQuery, { krajHint } = {}) {
+      const q = String(rawQuery || '').trim();
+      if (q.length < 2) return null;
+
+      const nq = normalizeKey(q);
+      const tokens = nq.split(' ').filter(Boolean);
+      const exactKey = tokens.length === 1 ? tokens[0] : '';
+
+      const scored = [];
+      for (const s of items) {
+        const hayName = normalizeKey(String(s?.name || ''));
+        const hayOkres = normalizeKey(String(s?.okresName || ''));
+        const hayKraj = normalizeKey(String(getKrajLabel?.(s?.kraj) || ''));
+        const hayAll = (hayName + ' ' + hayOkres + ' ' + hayKraj).trim();
+
+        if (!tokens.every((t) => tokenInText(hayAll, t))) continue;
+
+        let score = 0;
+        for (const t of tokens) {
+          if (wholeWordInText(hayName, t)) score += 6;
+          else if (tokenInText(hayName, t)) score += 4;
+          else if (wholeWordInText(hayOkres, t)) score += 3;
+          else if (tokenInText(hayOkres, t)) score += 2;
+          else if (tokenInText(hayKraj, t)) score += 1;
+        }
+
+        if (exactKey && hayName === exactKey) score += 20;
+        if (String(s?.t || '') === 'obec') score += 2;
+        if (String(s?.t || '') === 'zsj') score -= 1;
+
+        // If the deep-link already contains a selected region, bias towards that.
+        if (krajHint && String(s?.kraj || '').trim() === String(krajHint || '').trim()) score += 3;
+
+        if (tokens.length >= 2 && hayName.includes(tokens.join(' '))) score += 2;
+        scored.push({ s, score, hayName });
+      }
+
+      scored.sort(
+        (a, b) =>
+          b.score - a.score ||
+          String(a.s?.name || '').length - String(b.s?.name || '').length ||
+          String(a.s?.name || '').localeCompare(String(b.s?.name || ''), 'cs')
+      );
+
+      const exactHits = exactKey ? scored.filter((x) => x.hayName === exactKey) : [];
+      const list = exactHits.length ? exactHits : scored;
+      return list.length ? list[0].s : null;
+    }
+
     return {
       setItems(next) {
         items = next || [];
       },
+      findBestMatch,
       close
     };
   }
@@ -1535,12 +1585,31 @@
 
       if (q && qEl) qEl.value = q;
       if (kraj && krajEl) krajEl.value = kraj;
+
+      // Prefer a real pick from our suggest list (so we have a stable key -> coords).
       if (place && placeEl) {
-        placeEl.value = place;
-        selectedPlace = null;
+        const picked = placeSugg?.findBestMatch ? placeSugg.findBestMatch(place, { krajHint: kraj || null }) : null;
+        if (picked) {
+          const display = formatPickedPlaceLabel(
+            picked,
+            (code) => CZ_REGION_NAME_BY_CODE[String(code || '').trim()] || ''
+          );
+          selectedPlace = { ...picked, __display: display };
+          placeEl.value = display || picked.name;
+        } else {
+          placeEl.value = place;
+          selectedPlace = null;
+        }
       }
+
       if (min && minEl) minEl.value = min;
-      if (km && dojezdEl) dojezdEl.value = km;
+
+      // IMPORTANT: without dojezd (km), the place filter would do nothing.
+      // If a place is present but km is missing, default to 5 km.
+      if (dojezdEl) {
+        if (km) dojezdEl.value = km;
+        else if (place && String(dojezdEl.value || '').trim() === '') dojezdEl.value = '5';
+      }
     }
 
     async function distanceKmForOffer(offer, originPoint) {
@@ -1697,6 +1766,12 @@
     krajEl?.addEventListener('change', () => runSearch({ resetPage: true }));
     placeEl?.addEventListener('input', () => {
       selectedPlace = null;
+
+      // UX: place filtering requires km. If user types a place and km is empty, default to 5 km.
+      if (dojezdEl && String(placeEl.value || '').trim().length >= 2 && !String(dojezdEl.value || '').trim()) {
+        dojezdEl.value = '5';
+      }
+
       if (String(placeEl.value || '').trim().length >= 2 || !String(placeEl.value || '').trim()) runSearch({ resetPage: true });
     });
     minEl?.addEventListener('input', () => runSearch({ resetPage: true }));
