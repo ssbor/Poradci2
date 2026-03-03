@@ -617,6 +617,28 @@ function stripJsonFromText(raw) {
   return (firstObj ? firstObj[0] : txt).trim();
 }
 
+function clampString(s, maxLen) {
+  const n = Number(maxLen || 0) || 0;
+  const txt = String(s || '').trim();
+  if (!n || n < 10) return txt;
+  if (txt.length <= n) return txt;
+  return txt.slice(0, Math.max(0, n - 1)).trimEnd() + '…';
+}
+
+function makeFallbackAiObject({ content, lastUserMsg }) {
+  const raw = String(content || '').trim();
+  const inferred = inferIntentFromText(lastUserMsg) || 'general';
+  const reply = clampString(raw.replace(/\s+/g, ' ').trim() || 'Rozumím.', 650);
+  const out = {
+    reply,
+    intent: inferred,
+    profile: {},
+    search: inferred !== 'general' ? { q: clampString(String(lastUserMsg || '').trim(), 180) } : null,
+    follow_up: null
+  };
+  return out;
+}
+
 async function listGeminiModels(geminiKey) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(geminiKey)}`;
   const resp = await fetch(url, { method: 'GET' });
@@ -756,7 +778,7 @@ exports.handler = async function handler(event) {
         body: JSON.stringify({
           model: DEFAULT_OPENAI_MODEL,
           temperature: 0.2,
-          max_tokens: 450,
+          max_tokens: 900,
           response_format: { type: 'json_object' },
           messages: reqMessages
         })
@@ -803,7 +825,7 @@ exports.handler = async function handler(event) {
           contents,
           generationConfig: {
             temperature: 0.2,
-            maxOutputTokens: 450,
+            maxOutputTokens: 900,
             responseMimeType: 'application/json'
           }
         })
@@ -851,20 +873,21 @@ exports.handler = async function handler(event) {
       content = Array.isArray(parts) ? parts.map((p) => p?.text || '').join('') : '';
     }
 
+    const lastUserMsg = [...messages].reverse().find((m) => m && m.role === 'user' && String(m.content || '').trim())?.content || '';
+
     const jsonText = stripJsonFromText(content);
     const outParsed = safeParseJson(jsonText);
-    if (!outParsed.ok) {
-      return json(
-        502,
-        { error: 'AI returned non-JSON output.', context: String(content || '').slice(0, 500) },
-        { 'access-control-allow-origin': '*' }
-      );
-    }
+    const out =
+      outParsed.ok && outParsed.value && typeof outParsed.value === 'object' && !Array.isArray(outParsed.value)
+        ? outParsed.value
+        : makeFallbackAiObject({ content, lastUserMsg });
 
-    const out = outParsed.value || {};
+    // Enforce short UI-friendly text even if the model ignores instructions.
+    out.reply = clampString(out?.reply || 'Rozumím.', 650);
+    if (out.follow_up != null) out.follow_up = clampString(out?.follow_up || '', 350);
+
     const followUpTxt = String(out?.follow_up || '').trim();
     const outIntent = normalizeIntent(out?.intent);
-    const lastUserMsg = [...messages].reverse().find((m) => m && m.role === 'user' && String(m.content || '').trim())?.content || '';
     const inferredIntent = inferIntentFromText(lastUserMsg);
     const intentFromMode = mode === 'jobs' ? 'jobs' : mode === 'edu' ? 'edu' : mode === 'courses' ? 'courses' : '';
     const intent = mode === 'auto' ? (outIntent || inferredIntent || 'general') : outIntent || intentFromMode || '';
