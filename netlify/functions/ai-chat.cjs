@@ -900,6 +900,36 @@ function stripJsonFromText(raw) {
   return (firstObj ? firstObj[0] : txt).trim();
 }
 
+function unescapeJsonString(s) {
+  const raw = String(s || '');
+  try {
+    // Wrap in quotes to reuse JSON string unescaping.
+    return JSON.parse('"' + raw.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"');
+  } catch {
+    // Best-effort fallback.
+    return raw
+      .replace(/\\n/g, '\n')
+      .replace(/\\r/g, '\r')
+      .replace(/\\t/g, '\t')
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, '\\');
+  }
+}
+
+function extractJsonishStringField(raw, fieldName) {
+  const txt = String(raw || '');
+  if (!txt) return '';
+  const key = String(fieldName || '').trim();
+  if (!key) return '';
+
+  // Tolerant extraction even from truncated JSON.
+  // Matches: "reply": "..." with escaped quotes.
+  const re = new RegExp('"' + key.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') + '"\\s*:\\s*"((?:\\\\.|[^"\\\\])*)"', 'i');
+  const m = txt.match(re);
+  if (!m) return '';
+  return unescapeJsonString(m[1] || '');
+}
+
 function clampString(s, maxLen) {
   const n = Number(maxLen || 0) || 0;
   const txt = String(s || '').trim();
@@ -911,13 +941,21 @@ function clampString(s, maxLen) {
 function makeFallbackAiObject({ content, lastUserMsg }) {
   const raw = String(content || '').trim();
   const inferred = inferIntentFromText(lastUserMsg) || 'general';
-  const reply = clampString(raw.replace(/\s+/g, ' ').trim() || 'Rozumím.', 650);
+
+  // If the model returned a JSON-looking blob but it didn't parse (truncated, extra text, etc),
+  // extract just the reply so we don't show raw JSON to users.
+  const jsonishReply = extractJsonishStringField(raw, 'reply');
+  const replySource = jsonishReply || raw;
+  const reply = clampString(String(replySource || '').replace(/\s+/g, ' ').trim() || 'Rozumím.', 650);
+
+  // Optional: follow_up extraction as well (if present).
+  const jsonishFollowUp = extractJsonishStringField(raw, 'follow_up');
   const out = {
     reply,
     intent: inferred,
     profile: {},
     search: inferred !== 'general' ? { q: clampString(String(lastUserMsg || '').trim(), 180) } : null,
-    follow_up: null
+    follow_up: jsonishFollowUp ? clampString(String(jsonishFollowUp || '').trim(), 350) : null
   };
   return out;
 }
@@ -1192,6 +1230,8 @@ exports.handler = async function handler(event) {
     let edu_match_count = null;
     let edu_url = null;
 
+    const anySearch = hasAnySearch(normalizedSearch || out?.search);
+
     // Normalize education region filter if AI used a human region name.
     let searchForEdu = normalizedSearch && typeof normalizedSearch === 'object' ? { ...normalizedSearch } : null;
 
@@ -1204,7 +1244,7 @@ exports.handler = async function handler(event) {
 
       if (shouldComputeJobs && offers.length && normalizedSearch) {
         jobs_match_count = countMatchingOffers(offers, normalizedSearch);
-        if (jobs_match_count && jobs_match_count > 0) jobs_url = buildJobsUrl(normalizedSearch);
+        if (anySearch) jobs_url = buildJobsUrl(normalizedSearch);
       }
       if ((mode === 'jobs' || (mode === 'auto' && intent === 'jobs')) && offers.length && normalizedSearch) {
         recommendations = recommendOffers(offers, normalizedSearch);
@@ -1226,15 +1266,13 @@ exports.handler = async function handler(event) {
 
           const baseSearch = searchForEdu || normalizedSearch;
           edu_match_count = countMatchingSchools(schools, baseSearch);
-          if (edu_match_count && edu_match_count > 0) edu_url = buildEduUrl(baseSearch);
+          if (anySearch) edu_url = buildEduUrl(baseSearch);
           edu_recommendations = recommendSchools(schools, baseSearch);
         }
       }
     } catch {
       // ignore edu recommendations errors
     }
-
-    const anySearch = hasAnySearch(normalizedSearch || out?.search);
 
     // UX: actions/results should be available even if a follow-up question is asked.
     const okToShowActions = mode !== 'jobs' || anySearch;
@@ -1245,7 +1283,7 @@ exports.handler = async function handler(event) {
           const n = jobs_match_count != null && Number.isFinite(Number(jobs_match_count)) ? Number(jobs_match_count) : null;
           actions = [
             {
-              label: n && n > 0 ? `Zobrazit nabídky (${n})` : 'Otevřít pracovní nabídky',
+              label: n && n > 0 ? `Zobrazit nabídky (${n})` : 'Zobrazit nabídky',
               url: jobs_url || 'prace.html#hledani'
             }
           ];
@@ -1271,7 +1309,7 @@ exports.handler = async function handler(event) {
         const n = jobs_match_count != null && Number.isFinite(Number(jobs_match_count)) ? Number(jobs_match_count) : null;
         actions = [
           {
-            label: n && n > 0 ? `Zobrazit všechny nabídky (${n})` : 'Otevřít pracovní nabídky',
+            label: n && n > 0 ? `Zobrazit nabídky (${n})` : 'Zobrazit nabídky',
             url: jobs_url || 'prace.html#hledani'
           }
         ];
