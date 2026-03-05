@@ -925,6 +925,31 @@ form[data-role="skoly-form"] select[data-role="skoly-stupen"]{ max-width: 185px;
 /* Ensure action row spans full width */
 form[data-role="skoly-form"] .col-12{ grid-column: 1 / -1; }
 
+/* Mobile: avoid horizontal overflow ("Kód oboru" stays inside) */
+@media (max-width: 640px){
+  form[data-role="skoly-form"] .skoly-search-row{
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: .55rem;
+  }
+
+  form[data-role="skoly-form"] .skoly-search,
+  form[data-role="skoly-form"] .skoly-code{
+    flex: 1 1 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  form[data-role="skoly-form"] .skoly-filters-row{
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  form[data-role="skoly-form"] .skoly-filters-row .field{ width: 100%; }
+  form[data-role="skoly-form"] .skoly-filters-row select.select{ width: 100%; max-width: none; }
+}
+
 /* Práce: form layout + school suggest dropdown */
 form[data-role="jobs-form"] .jobs-profile-row,
 form[data-role="jobs-form"] .jobs-search-row{
