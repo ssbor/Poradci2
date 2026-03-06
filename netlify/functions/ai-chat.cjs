@@ -205,39 +205,47 @@ function sanitizeFollowUp(followUp, { intent } = {}) {
 
   const it = normalizeIntent(intent) || '';
 
-  // Hard bans: topics that are NOT used for filtering (we can still advise in reply, but don't ask).
-  const bannedJobs = /(vystud|skola|maturit|ucen|vyuc|vos\b|\bvs\b|praxe|ridic|\brp\b|zivotopis|\bcv\b|rodin|deti|zdrav|invalid|handicap|znack|zna\s*ck|specializ|model(y)?\s*aut)/i;
-  const bannedEdu = /(znamk|prospech|prumer|finance|rozpocet|peniz|stipend|bydlen|kolej|internat)/i;
-  const bannedCourses = /(rozpocet|peniz|cena|kolik\s*to\s*stoji|kolik\s*stoj|cas\b|kdy\b|vikend|vecer|dopoledn)/i;
-
-  if (it === 'jobs' && bannedJobs.test(t)) return null;
-  if (it === 'edu' && bannedEdu.test(t)) return null;
-  if (it === 'courses' && bannedCourses.test(t)) return null;
-
-  // Allow list per intent: only ask about filterable fields.
-  const allowJobs = /(kde|mesto|obec|kraj|okoli|dojezd|km|mzda|plat|od\s*kolika|minimaln|jakou\s*praci|jaka\s*pozice|co\s*hledas|jak(y|ou)\s*obor|na\s*co\s*se\s*zamerit)/i;
-  const allowEdu = /(kraj|mesto|obec|forma|denn|dalkov|kombin|stupen|vyuc|ucen|maturit|vos\b|\bvs\b|typ|druh|kod|obor|program|nastavb)/i;
-  const allowCourses = /(jaky\s*kurz|co\s*se\s*chces\s*naucit|rekvalifik|certifik|osvedcen|v\s*jakem\s*oboru|na\s*jakou\s*pozici)/i;
-
-  if (it === 'jobs') return allowJobs.test(t) ? one.slice(0, 180) : null;
-  if (it === 'edu') return allowEdu.test(t) ? one.slice(0, 180) : null;
-  if (it === 'courses') return allowCourses.test(t) ? one.slice(0, 180) : null;
-
-  // For general Q&A: allow, but still keep it short.
+  // Strict rule: the advisor may only ask questions that map to actual filters.
+  // Anything else must be handled as advice in reply (no questions).
+  if (!isFilterableQuestionForIntent(one, it)) return null;
   return one.slice(0, 180);
 }
 
-function stripBannedQuestionsFromReply(reply, { intent } = {}) {
+function isFilterableQuestionForIntent(question, intent) {
+  const q = String(question || '').trim();
+  if (!q) return false;
+
+  const it = normalizeIntent(intent) || '';
+  if (!it || it === 'general') return true;
+
+  const t = normalizeText(q);
+  if (!t) return false;
+
+  // Hard bans: topics that are NOT used for filtering (we can still advise in reply, but don't ask).
+  const bannedJobs = /(vystud|skola|maturit|ucen|vyuc|vos\b|\bvs\b|praxe|ridic|\brp\b|zivotopis|\bcv\b|rodin|deti|zdrav|invalid|handicap|znack|zna\s*ck|specializ|model(y)?\s*aut|\bhpp\b|\bdpp\b|\bdpc\b|uvazek|smenn|rann|nocn|vikend)/i;
+  const bannedEdu = /(znamk|prospech|prumer|finance|rozpocet|peniz|stipend|bydlen|kolej|internat)/i;
+  const bannedCourses = /(rozpocet|peniz|cena|kolik\s*to\s*stoji|kolik\s*stoj|cas\b|kdy\b|vikend|vecer|dopoledn)/i;
+
+  if (it === 'jobs' && bannedJobs.test(t)) return false;
+  if (it === 'edu' && bannedEdu.test(t)) return false;
+  if (it === 'courses' && bannedCourses.test(t)) return false;
+
+  // Allow list per intent: only ask about filterable fields.
+  const allowJobs = /(kde|mesto|obec|kraj|okoli|dojezd|km|mzda|plat|od\s*kolika|minimaln|jakou\s*praci|jaka\s*pozice|co\s*hledas)/i;
+  const allowEdu = /(kraj|mesto|obec|forma|denn|dalkov|kombin|stupen|vyuc|ucen|maturit|vos\b|\bvs\b|typ|druh|kod|k(o|ó)d|obor|program|nastavb)/i;
+  const allowCourses = /(jaky\s*kurz|co\s*se\s*chces\s*naucit|rekvalifik|certifik|osvedcen|v\s*jakem\s*oboru|na\s*jakou\s*pozici)/i;
+
+  if (it === 'jobs') return allowJobs.test(t);
+  if (it === 'edu') return allowEdu.test(t);
+  if (it === 'courses') return allowCourses.test(t);
+  return true;
+}
+
+function stripUnfilterableQuestionsFromReply(reply, { intent } = {}) {
   const base = String(reply || '').trim();
   if (!base || !base.includes('?')) return base;
 
   const it = normalizeIntent(intent) || '';
-  if (it !== 'jobs') return base;
-
-  // Jobs: prevent questions about car brands/specialization (not filterable).
-  const bannedQ = /(znack|zna\s*ck|specializ|model(y)?\s*aut)/i;
-  if (!bannedQ.test(normalizeText(base))) return base;
-
   const parts = base.split('?');
   let out = '';
   for (let i = 0; i < parts.length; i++) {
@@ -245,9 +253,8 @@ function stripBannedQuestionsFromReply(reply, { intent } = {}) {
     const isQuestion = i < parts.length - 1;
     const seg = isQuestion ? (segRaw + '?') : segRaw;
     if (!seg.trim()) continue;
-    if (isQuestion) {
-      const t = normalizeText(seg);
-      if (bannedQ.test(t)) continue;
+    if (isQuestion && !isFilterableQuestionForIntent(seg, it)) {
+      continue;
     }
     out += seg;
   }
@@ -1354,8 +1361,8 @@ exports.handler = async function handler(event) {
     // Encourage actionable advice even when asking a follow-up.
     out.reply = maybeAddActionableTip(out.reply, { intent, search: normalizedSearch || out?.search || null });
 
-    // Final cleanup: remove unfilterable questions that leaked into reply.
-    out.reply = clampString(stripBannedQuestionsFromReply(out.reply, { intent }) || out.reply || 'Rozumím.', 650);
+    // Final cleanup: remove ANY unfilterable questions that leaked into reply.
+    out.reply = clampString(stripUnfilterableQuestionsFromReply(out.reply, { intent }) || out.reply || 'Rozumím.', 650);
 
     // Normalize education region filter if AI used a human region name.
     let searchForEdu = normalizedSearch && typeof normalizedSearch === 'object' ? { ...normalizedSearch } : null;
