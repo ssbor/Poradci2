@@ -22,6 +22,8 @@
       <a href="prace.html">Práce</a>
       <a href="vzdelani.html">Vzdělání</a>
       <a href="kurzy.html">Kurzy</a>
+      <a href="poradce/index.html">Chytrý poradce</a>
+      <a href="statistiky/index.html">Statistiky</a>
       <a href="#faq">FAQ</a>
       <a href="#kontakt">Kontakt</a>
     </nav>
@@ -108,47 +110,35 @@
         </div>
       </div>
     </div>
-  </section>
 
-  <section class="section" id="poradce">
-    <h2 class="section-title">Chytrý poradce</h2>
-    <p class="section-sub">Napiš mi, co řešíš. Budu se doptávat a pak ti doporučím další krok (práce / vzdělání / kurzy) a u práce i konkrétní nabídky.</p>
+    <div class="grid" style="margin-top: 1rem">
+      <div class="card card--feature card--advisor col-6">
+        <div class="card-title-row">
+          <h3>Chytrý poradce</h3>
+        </div>
+        <p class="muted">Rychlý start: napiš dotaz a poradce ti hned doporučí další krok. Nabídky a odkazy se ukážou v panelu „Výsledky“.</p>
+        <ul class="meta-list">
+          <li>Auto režim (práce / vzdělání / kurzy)</li>
+          <li>Odkazy s filtry podle konverzace</li>
+          <li>Krátké odpovědi + výsledky vedle chatu</li>
+        </ul>
+        <div style="margin-top: .9rem">
+          <a class="btn btn--advisor" href="poradce/index.html">Otevřít chytrého poradce</a>
+        </div>
+      </div>
 
-    <div class="card advisor-card" data-role="advisor-root" style="margin-top: 1rem">
-      <div class="advisor-shell">
-        <aside class="advisor-sidebar" aria-label="Historie chatů">
-          <div class="advisor-sidebar-top">
-            <div class="advisor-sidebar-title">Panel</div>
-            <div class="advisor-sidebar-tabs" role="tablist" aria-label="Panel poradce">
-              <button type="button" class="advisor-tab is-active" data-role="advisor-tab" data-tab="results" role="tab" aria-selected="true">Výsledky</button>
-              <button type="button" class="advisor-tab" data-role="advisor-tab" data-tab="history" role="tab" aria-selected="false">Historie</button>
-            </div>
-          </div>
-          <div class="advisor-results" data-role="advisor-results" aria-label="Výsledky"></div>
-          <div class="advisor-history" data-role="advisor-history" aria-label="Seznam chatů" hidden></div>
-        </aside>
-
-        <div class="advisor-main">
-          
-
-          <div class="advisor-chat" aria-label="Chat poradce">
-            <div class="chat-header">
-              <div class="advisor-header-row">
-                <h3>Kariérový poradce <span class="advisor-mode-badge" data-role="advisor-mode-badge" aria-live="polite">Auto</span></h3>
-                <button class="advisor-reset" type="button" data-role="advisor-reset" aria-label="Nový chat">Nový chat</button>
-              </div>
-              <p>Napiš mi, co řešíš.</p>
-            </div>
-
-            <div class="chat-messages" data-role="advisor-messages"></div>
-
-            <div class="chat-input">
-              <input type="text" data-role="advisor-input" placeholder="Napište svou zprávu...">
-              <button type="button" data-role="advisor-send">→</button>
-            </div>
-          </div>
-
-          <div class="muted" data-role="advisor-status" style="margin-top:.6rem"></div>
+      <div class="card card--feature card--stats col-6">
+        <div class="card-title-row">
+          <h3>Statistiky</h3>
+        </div>
+        <p class="muted">Přehledy a čísla (např. nabídky podle krajů, top obory, trendy). Zatím je to připravené jako prázdný základ.</p>
+        <ul class="meta-list">
+          <li>Jedno místo pro přehledy</li>
+          <li>Prokliky do práce a vzdělání</li>
+          <li>Prostor pro grafy a KPI</li>
+        </ul>
+        <div style="margin-top: .9rem">
+          <a class="btn btn--primary-dark" href="statistiky/index.html">Otevřít statistiky</a>
         </div>
       </div>
     </div>

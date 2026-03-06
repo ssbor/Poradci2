@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <title>Chytrý poradce – SŠ Bor (poradci)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="../style.css?v=20260306-2">
+  <link rel="stylesheet" href="../chatbot.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="../index.html" aria-label="Domů">
+        <div class="brand-mark" style="background: linear-gradient(135deg, #4f46e5 0%, #8b5cf6 100%);">SŠ</div>
+        <div>
+          <p class="brand-title">Střední škola Bor</p>
+          <p class="brand-sub">Kariérové poradenství · Chytrý poradce</p>
+        </div>
+      </a>
+      <nav class="nav" aria-label="Hlavní navigace">
+        <a href="../index.html#rozcestnik">Rozcestník</a>
+        <a href="../prace.html">Práce</a>
+        <a href="../vzdelani.html">Vzdělání</a>
+        <a href="../kurzy.html">Kurzy</a>
+        <a href="index.html">Chytrý poradce</a>
+        <a href="../statistiky/index.html">Statistiky</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="page-accent page-accent--advisor" aria-hidden="true"></div>
+
+  <main class="container">
+    <section class="section">
+      <div class="hero" style="background: linear-gradient(120deg, rgba(255,0,105,.95) 0%, rgba(255,45,176,.95) 55%, rgba(255,122,197,.95) 100%);">
+        <div class="hero-grid">
+          <div>
+            <h1>Chytrý poradce</h1>
+            <p>Napiš mi, co řešíš. Doporučím další krok (práce / vzdělání / kurzy) a u práce i konkrétní nabídky. Výsledky se ukazují v panelu vlevo.</p>
+            <div class="hero-actions">
+              <a class="btn btn--advisor-dark" href="../index.html#rozcestnik">Zpět na rozcestník</a>
+            </div>
+          </div>
+          <div class="card" style="border-color: rgba(255,255,255,.25); background: rgba(255,255,255,.14); color: #fff;">
+            <h3 style="margin-top:0; color:#fff;">Tipy na dotazy</h3>
+            <ul class="checklist" style="margin-top:.6rem">
+              <li>„Hledám práci automechanik Plzeň“</li>
+              <li>„Chci nástavbu v Plzeňském kraji“</li>
+              <li>„Jaké kurzy se hodí pro svářeče?“</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="chat">
+      <h2 class="section-title">Chat poradce</h2>
+      <p class="section-sub">Piš stručně. Když bude něco chybět, doptám se.</p>
+
+      <div class="card advisor-card" data-role="advisor-root" style="margin-top: 1rem">
+        <div class="advisor-shell">
+          <aside class="advisor-sidebar" aria-label="Historie chatů">
+            <div class="advisor-sidebar-top">
+              <div class="advisor-sidebar-title">Panel</div>
+              <div class="advisor-sidebar-tabs" role="tablist" aria-label="Panel poradce">
+                <button type="button" class="advisor-tab is-active" data-role="advisor-tab" data-tab="results" role="tab" aria-selected="true">Výsledky</button>
+                <button type="button" class="advisor-tab" data-role="advisor-tab" data-tab="history" role="tab" aria-selected="false">Historie</button>
+              </div>
+            </div>
+            <div class="advisor-results" data-role="advisor-results" aria-label="Výsledky"></div>
+            <div class="advisor-history" data-role="advisor-history" aria-label="Seznam chatů" hidden></div>
+          </aside>
+
+          <div class="advisor-main">
+            <div class="advisor-chat" aria-label="Chat poradce">
+              <div class="chat-header">
+                <div class="advisor-header-row">
+                  <h3>Kariérový poradce <span class="advisor-mode-badge" data-role="advisor-mode-badge" aria-live="polite">Auto</span></h3>
+                  <button class="advisor-reset" type="button" data-role="advisor-reset" aria-label="Nový chat">Nový chat</button>
+                </div>
+                <p>Napiš mi, co řešíš.</p>
+              </div>
+
+              <div class="chat-messages" data-role="advisor-messages"></div>
+
+              <div class="chat-input">
+                <input type="text" data-role="advisor-input" placeholder="Napište svou zprávu...">
+                <button type="button" data-role="advisor-send">→</button>
+              </div>
+            </div>
+
+            <div class="muted" data-role="advisor-status" style="margin-top:.6rem"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div>
+        <div class="footer-title">SŠ Bor</div>
+        <p class="muted">Chytrý poradce pro kariérové poradenství.</p>
+      </div>
+      <div>
+        <div class="footer-title">Odkazy</div>
+        <a href="../prace.html">Práce</a><br>
+        <a href="../vzdelani.html">Vzdělání</a><br>
+        <a href="../statistiky/index.html">Statistiky</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../chatbot.js?v=20260224-4"></script>
+</body>
+</html>

@@ -48,6 +48,10 @@ a:hover{ text-decoration: underline; }
   backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(231,238,248,.9);
 }
+
+/* Optional thin accent bar under sticky header (used on dedicated pages) */
+.page-accent{ height: 4px; background: linear-gradient(90deg, var(--primary) 0%, #5a9ef6 100%); }
+.page-accent--advisor{ background: linear-gradient(90deg, #ff0069 0%, #ff2db0 55%, #ff7ac5 100%); }
 .header-inner{
   display:flex;
   align-items:center;
@@ -298,6 +302,8 @@ select.select[data-role="jobs-page-size"]{
 }
 .card--edu::before{ background: linear-gradient(90deg, rgba(79,70,229,1) 0%, rgba(139,92,246,1) 100%); }
 .card--courses::before{ background: linear-gradient(90deg, #f97316 0%, #fb923c 100%); }
+.card--advisor::before{ background: linear-gradient(90deg, #ff0069 0%, #ff2db0 55%, #ff7ac5 100%); }
+.card--stats::before{ background: linear-gradient(90deg, rgba(19,102,214,1) 0%, rgba(79,70,229,1) 100%); }
 
 .btn--edu{
   background: linear-gradient(120deg, rgba(79,70,229,1) 0%, rgba(139,92,246,1) 100%);
@@ -326,6 +332,22 @@ select.select[data-role="jobs-page-size"]{
   color: #fff;
 }
 .btn--purple-dark:hover{ background: linear-gradient(120deg, #3730a3 0%, #6d28d9 100%); }
+
+/* Advisor CTA (distinct from Edu purple) */
+.btn--advisor{
+  background: linear-gradient(120deg, #ff0069 0%, #ff2db0 55%, #ff7ac5 100%);
+  border-color: rgba(0,0,0,.35);
+  color: #fff;
+}
+.btn--advisor:hover{ background: linear-gradient(120deg, #e6005f 0%, #ff2db0 55%, #ff7ac5 100%); }
+
+/* Darker advisor CTA for use on bright/pink backgrounds */
+.btn--advisor-dark{
+  background: linear-gradient(120deg, #7a0034 0%, #a30052 55%, #c4006a 100%);
+  border-color: rgba(0,0,0,.45);
+  color: #fff;
+}
+.btn--advisor-dark:hover{ background: linear-gradient(120deg, #65002c 0%, #8e0047 55%, #ad005d 100%); }
 
 .btn--orange-dark{
   background: linear-gradient(120deg, #ea580c 0%, #f97316 100%);
