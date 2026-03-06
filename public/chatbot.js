@@ -608,7 +608,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			chatWindow.style.display = open ? 'none' : 'flex';
 			if (!open && chatMessages.children.length === 0) {
 				addMessageToChat(
-					'Jsem kariérový poradce. Napiš mi co máš vystudováno, co umíš, kde chceš pracovat a jakou mzdu očekáváš. Já z toho vyberu vhodné nabídky.',
+					'Jsem kariérový poradce. Napiš mi jakou práci (nebo obor) hledáš + kde (město/kraj, případně dojezd) a případně minimální mzdu. Podle toho vyfiltruju nabídky a k tomu poradím další kroky.',
 					'bot'
 				);
 			}
@@ -640,7 +640,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			chatWindow.style.display = 'flex';
 			if (chatMessages.children.length === 0) {
 				addMessageToChat(
-					'Jsem kariérový poradce. Napiš mi co máš vystudováno, co umíš, kde chceš pracovat a jakou mzdu očekáváš. Já z toho vyberu vhodné nabídky.',
+					'Jsem kariérový poradce. Napiš mi jakou práci (nebo obor) hledáš + kde (město/kraj, případně dojezd) a případně minimální mzdu. Podle toho vyfiltruju nabídky a k tomu poradím další kroky.',
 					'bot'
 				);
 			}

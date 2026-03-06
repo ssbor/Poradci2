@@ -169,6 +169,10 @@ function hasAnySearch(search) {
   const krajId = String(search.krajId || '').trim();
   const place = String(search.place || '').trim();
   const code = String(search.code || '').trim();
+  const typSkoly = String(search.typSkoly || '').trim();
+  const druhSkoly = String(search.druhSkoly || '').trim();
+  const stupen = String(search.stupen || '').trim();
+  const forma = String(search.forma || '').trim();
   const minMzda = search.minMzda != null ? Number(search.minMzda) : 0;
   const dojezdKm = search.dojezdKm != null ? Number(search.dojezdKm) : 0;
   return (
@@ -177,9 +181,86 @@ function hasAnySearch(search) {
     !!kraj ||
     !!krajId ||
     !!place ||
+    !!typSkoly ||
+    !!druhSkoly ||
+    !!stupen ||
+    !!forma ||
     (Number.isFinite(minMzda) && minMzda > 0) ||
     (Number.isFinite(dojezdKm) && dojezdKm > 0)
   );
+}
+
+function sanitizeFollowUp(followUp, { intent } = {}) {
+  const raw = String(followUp || '').trim();
+  if (!raw) return null;
+
+  const q = raw.replace(/\s+/g, ' ').trim();
+
+  // Keep it as a single short question. If the model outputs multiple questions, keep only the first.
+  const qIdx = q.indexOf('?');
+  const one = qIdx >= 0 ? q.slice(0, qIdx + 1).trim() : q;
+
+  const t = normalizeText(one);
+  if (!t) return null;
+
+  const it = normalizeIntent(intent) || '';
+
+  // Hard bans: topics that are NOT used for filtering (we can still advise in reply, but don't ask).
+  const bannedJobs = /(vystud|skola|maturit|ucen|vyuc|vos\b|\bvs\b|praxe|ridic|\brp\b|zivotopis|\bcv\b|rodin|deti|zdrav|invalid|handicap)/i;
+  const bannedEdu = /(znamk|prospech|prumer|finance|rozpocet|peniz|stipend|bydlen|kolej|internat)/i;
+  const bannedCourses = /(rozpocet|peniz|cena|kolik\s*to\s*stoji|kolik\s*stoj|cas\b|kdy\b|vikend|vecer|dopoledn)/i;
+
+  if (it === 'jobs' && bannedJobs.test(t)) return null;
+  if (it === 'edu' && bannedEdu.test(t)) return null;
+  if (it === 'courses' && bannedCourses.test(t)) return null;
+
+  // Allow list per intent: only ask about filterable fields.
+  const allowJobs = /(kde|mesto|obec|kraj|okoli|dojezd|km|mzda|plat|od\s*kolika|minimaln|jakou\s*praci|jaka\s*pozice|co\s*hledas|jak(y|ou)\s*obor|na\s*co\s*se\s*zamerit)/i;
+  const allowEdu = /(kraj|mesto|obec|forma|denn|dalkov|kombin|stupen|vyuc|ucen|maturit|vos\b|\bvs\b|typ|druh|kod|obor|program|nastavb)/i;
+  const allowCourses = /(jaky\s*kurz|co\s*se\s*chces\s*naucit|rekvalifik|certifik|osvedcen|v\s*jakem\s*oboru|na\s*jakou\s*pozici)/i;
+
+  if (it === 'jobs') return allowJobs.test(t) ? one.slice(0, 180) : null;
+  if (it === 'edu') return allowEdu.test(t) ? one.slice(0, 180) : null;
+  if (it === 'courses') return allowCourses.test(t) ? one.slice(0, 180) : null;
+
+  // For general Q&A: allow, but still keep it short.
+  return one.slice(0, 180);
+}
+
+function maybeAddActionableTip(reply, { intent, search } = {}) {
+  const base = String(reply || '').trim();
+  const it = normalizeIntent(intent) || 'general';
+  if (!base) return base;
+  if (/\btip\b\s*:/i.test(base)) return base;
+
+  const s = search && typeof search === 'object' ? search : {};
+
+  let tip = '';
+  if (it === 'jobs') {
+    const q = String(s.q || '').trim();
+    const kraj = String(s.kraj || '').trim();
+    const place = String(s.place || '').trim();
+    const min = s.minMzda != null ? Number(s.minMzda) : 0;
+    if (!q) tip = 'Tip: napiš 1–2 názvy pozice nebo dovednosti (např. „svářeč“, „CNC“).';
+    else if (!kraj && !place) tip = 'Tip: doplň město nebo kraj + dojezd (km), výsledky budou přesnější.';
+    else if (!Number.isFinite(min) || min <= 0) tip = 'Tip: přidej minimální mzdu (od kolika), ať odfiltruju nevhodné nabídky.';
+  } else if (it === 'edu') {
+    const q = String(s.q || '').trim();
+    const code = String(s.code || '').trim();
+    const krajId = String(s.krajId || s.kraj || '').trim();
+    const forma = String(s.forma || '').trim();
+    const stupen = String(s.stupen || '').trim();
+    if (!q && !code) tip = 'Tip: napiš obor (nebo kód oboru) + kraj/město, vyberu konkrétní školy.';
+    else if (!krajId) tip = 'Tip: doplň kraj/město, ať to zúžíme na dostupné školy v okolí.';
+    else if (!forma && !stupen) tip = 'Tip: upřesni formu (denní/dálková) a stupeň (výuční list/maturita/VOŠ/VŠ).';
+  } else if (it === 'courses') {
+    const q = String(s.q || '').trim();
+    if (!q) tip = 'Tip: napiš, co se chceš naučit (např. „CNC“, „svářečák“, „Excel“), a pošlu relevantní kurzy.';
+  }
+
+  if (!tip) return base;
+  const combined = `${base} ${tip}`.trim();
+  return clampString(combined, 650);
 }
 
 function normalizeText(s) {
@@ -1052,17 +1133,18 @@ exports.handler = async function handler(event) {
       'Jsi chytrý poradce pro web SŠ Bor. ' +
       'Režim je daný polem mode: auto (automaticky), all (vše), jobs (pracovní nabídky), edu (vzdělání/školy), courses (kurzy). ' +
       'Pokud je mode=auto, SÁM rozpoznej téma a nastav intent. Přitom pořád umíš odpovědět na jakýkoli dotaz (general Q&A). ' +
-      'Chovej se jako SPECIALISTA podle zvoleného intent/módu: ' +
-      '- jobs: když už máš aspoň něco k filtrování (profese/dovednost/město/kraj/mzda), nejdřív dej best-effort výsledky (a vyplň search), a teprve pak polož maximálně 1 doplňující otázku. Nečekej na všechny filtry. ' +
-      '- edu: doptávej se na úroveň (výuční list/maturita/VOŠ/VŠ), obor, kraj/město, formu (denní/dálková/kombinovaná), a zda jde o nástavbu nebo změnu oboru. ' +
-      '- courses: doptávej se na cíl (rekvalifikace vs doplnění), časové možnosti, rozpočet a lokalitu/online. ' +
+      'Chovej se jako SPECIALISTA podle zvoleného intent/módu a dávej praktická doporučení (co udělat dál) – NE jen obecné fráze. ' +
+      'DŮLEŽITÉ: Ptej se (follow_up) pouze na informace, které umíme přímo použít pro filtrování výsledků. Neptej se na věci, které neumíme převést na filtry (např. vzdělání u pracovních nabídek, roky praxe, řidičák, rodinná situace, zdravotní stav, známky, rozpočet). ' +
+      '- jobs: filtrovatelné je jen search.q (pozice/dovednost), search.kraj (kraj), search.place (město/obec), search.dojezdKm (dojezd v km) a search.minMzda (min. mzda). Jakmile máš aspoň něco, dej best-effort výsledky a max 1 krátkou follow_up otázku jen na chybějící filtrovatelné údaje. ' +
+      '- edu: filtrovatelné je search.q (obor/škola/klíčová slova), search.code (kód oboru), search.krajId (kraj), search.typSkoly, search.druhSkoly, search.stupen, search.forma. Doptávej se max 1 otázkou jen na chybějící filtrovatelné údaje. ' +
+      '- courses: filtrovatelné je jen search.q (co se chce naučit / typ kurzu). Nedoptávej se na čas/rozpočet v follow_up; místo toho dej doporučení a navrhni klíčová slova do search.q. ' +
       'U obecného Q&A buď užitečný: když se uživatel ptá na cenu dopravy / bydlení / život v lokalitě, dej rozumný hrubý odhad a postup výpočtu, ale jasně řekni, že nemáš přístup k aktuálním ceníkům a že přesnou cenu je potřeba ověřit. Doptávej se na chybějící údaje (odkud–kam, způsob dopravy, počet dní v týdnu, nájem vs spolubydlení, velikost bytu, město). ' +
       'Piš STRUČNĚ: reply má být krátký (ideálně 2–4 věty, max ~450 znaků), bez dlouhých odstavců. Nepiš seznamy nabídek/škol do reply – konkrétní výsledky patří do recommendations/edu_recommendations a do odkazů. V reply se soustřeď na poradenství; follow_up buď null, nebo jen 1 krátká otázka. ' +
       'Důležité: nepřepínej stránku ani nenařizuj proklik; jen konverzuj a doptávej se. ' +
       'Vždy odpovídej ČESKY. ' +
       'V odpovědi vrať POUZE JSON objekt (bez markdownu). ' +
       'Drž se schématu: ' +
-        '{"reply":string,"intent":"jobs"|"edu"|"courses"|"general","profile":{...},"search":{"q":string,"kraj":string|null,"place":string|null,"minMzda":number|null,"dojezdKm":number|null,"code":string|null,"krajId":string|null},"follow_up":string|null}. ' +
+        '{"reply":string,"intent":"jobs"|"edu"|"courses"|"general","profile":{...},"search":{"q":string,"kraj":string|null,"place":string|null,"minMzda":number|null,"dojezdKm":number|null,"code":string|null,"krajId":string|null,"typSkoly":string|null,"druhSkoly":string|null,"stupen":string|null,"forma":string|null},"follow_up":string|null}. ' +
         'Poznámky: ' +
         '- intent=general použij pro běžné dotazy, které nejsou o práci/školách/kurzech. ' +
         '- Pro školy můžeš dát do search.code kód oboru (např. 23-45-M/01) a do search.kraj (nebo krajId) kraj (stačí i název kraje); server si to převede. ' +
@@ -1077,7 +1159,7 @@ exports.handler = async function handler(event) {
         mode,
         page: String(context?.page || ''),
         built_at: String(context?.built_at || ''),
-        note: 'search parametry se používají pro prace.html (jobs).'
+        note: 'search parametry se používají pro prace.html (jobs), vzdelani.html (edu) a kurzy.html (courses).'
       },
       null,
       0
@@ -1213,6 +1295,9 @@ exports.handler = async function handler(event) {
     const intentFromMode = mode === 'jobs' ? 'jobs' : mode === 'edu' ? 'edu' : mode === 'courses' ? 'courses' : '';
     const intent = mode === 'auto' ? (outIntent || inferredIntent || 'general') : outIntent || intentFromMode || '';
 
+    // Ensure follow-up questions stay within filterable topics.
+    out.follow_up = sanitizeFollowUp(out?.follow_up, { intent });
+
     let normalizedSearch = mode === 'auto' ? normalizeSearchForAuto(out?.search, { intent, lastUserMsg }) : (out?.search || null);
     if ((mode === 'jobs' || (mode === 'auto' && intent === 'jobs')) && normalizedSearch) {
       try {
@@ -1231,6 +1316,9 @@ exports.handler = async function handler(event) {
     let edu_url = null;
 
     const anySearch = hasAnySearch(normalizedSearch || out?.search);
+
+    // Encourage actionable advice even when asking a follow-up.
+    out.reply = maybeAddActionableTip(out.reply, { intent, search: normalizedSearch || out?.search || null });
 
     // Normalize education region filter if AI used a human region name.
     let searchForEdu = normalizedSearch && typeof normalizedSearch === 'object' ? { ...normalizedSearch } : null;
