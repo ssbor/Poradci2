@@ -206,7 +206,7 @@ function sanitizeFollowUp(followUp, { intent } = {}) {
   const it = normalizeIntent(intent) || '';
 
   // Hard bans: topics that are NOT used for filtering (we can still advise in reply, but don't ask).
-  const bannedJobs = /(vystud|skola|maturit|ucen|vyuc|vos\b|\bvs\b|praxe|ridic|\brp\b|zivotopis|\bcv\b|rodin|deti|zdrav|invalid|handicap)/i;
+  const bannedJobs = /(vystud|skola|maturit|ucen|vyuc|vos\b|\bvs\b|praxe|ridic|\brp\b|zivotopis|\bcv\b|rodin|deti|zdrav|invalid|handicap|znack|zna\s*ck|specializ|model(y)?\s*aut)/i;
   const bannedEdu = /(znamk|prospech|prumer|finance|rozpocet|peniz|stipend|bydlen|kolej|internat)/i;
   const bannedCourses = /(rozpocet|peniz|cena|kolik\s*to\s*stoji|kolik\s*stoj|cas\b|kdy\b|vikend|vecer|dopoledn)/i;
 
@@ -227,6 +227,34 @@ function sanitizeFollowUp(followUp, { intent } = {}) {
   return one.slice(0, 180);
 }
 
+function stripBannedQuestionsFromReply(reply, { intent } = {}) {
+  const base = String(reply || '').trim();
+  if (!base || !base.includes('?')) return base;
+
+  const it = normalizeIntent(intent) || '';
+  if (it !== 'jobs') return base;
+
+  // Jobs: prevent questions about car brands/specialization (not filterable).
+  const bannedQ = /(znack|zna\s*ck|specializ|model(y)?\s*aut)/i;
+  if (!bannedQ.test(normalizeText(base))) return base;
+
+  const parts = base.split('?');
+  let out = '';
+  for (let i = 0; i < parts.length; i++) {
+    const segRaw = String(parts[i] || '');
+    const isQuestion = i < parts.length - 1;
+    const seg = isQuestion ? (segRaw + '?') : segRaw;
+    if (!seg.trim()) continue;
+    if (isQuestion) {
+      const t = normalizeText(seg);
+      if (bannedQ.test(t)) continue;
+    }
+    out += seg;
+  }
+
+  return out.replace(/\s+/g, ' ').trim();
+}
+
 function maybeAddActionableTip(reply, { intent, search } = {}) {
   const base = String(reply || '').trim();
   const it = normalizeIntent(intent) || 'general';
@@ -241,9 +269,15 @@ function maybeAddActionableTip(reply, { intent, search } = {}) {
     const kraj = String(s.kraj || '').trim();
     const place = String(s.place || '').trim();
     const min = s.minMzda != null ? Number(s.minMzda) : 0;
+    const qn = normalizeText(q);
     if (!q) tip = 'Tip: napiš 1–2 názvy pozice nebo dovednosti (např. „svářeč“, „CNC“).';
     else if (!kraj && !place) tip = 'Tip: doplň město nebo kraj + dojezd (km), výsledky budou přesnější.';
     else if (!Number.isFinite(min) || min <= 0) tip = 'Tip: přidej minimální mzdu (od kolika), ať odfiltruju nevhodné nabídky.';
+
+    // If user mentions a car brand, explain it's not a filter and suggest better keywords.
+    if (!tip && qn && /(\bskoda\b|\bvw\b|\bvolkswagen\b|\bbmw\b|\baudi\b|\bmercedes\b|\bford\b|\btoyota\b|\brenault\b|\bpeugeot\b|\bcitroen\b|\bhyundai\b|\bkia\b|\bopel\b|\bfiat\b|\bseat\b|\bvolvo\b)/i.test(qn)) {
+      tip = 'Tip: značky aut ve filtrech nemáme – napiš radši typ práce (diagnostika/servis/pneuservis/karosář) a lokalitu.';
+    }
   } else if (it === 'edu') {
     const q = String(s.q || '').trim();
     const code = String(s.code || '').trim();
@@ -1319,6 +1353,9 @@ exports.handler = async function handler(event) {
 
     // Encourage actionable advice even when asking a follow-up.
     out.reply = maybeAddActionableTip(out.reply, { intent, search: normalizedSearch || out?.search || null });
+
+    // Final cleanup: remove unfilterable questions that leaked into reply.
+    out.reply = clampString(stripBannedQuestionsFromReply(out.reply, { intent }) || out.reply || 'Rozumím.', 650);
 
     // Normalize education region filter if AI used a human region name.
     let searchForEdu = normalizedSearch && typeof normalizedSearch === 'object' ? { ...normalizedSearch } : null;
