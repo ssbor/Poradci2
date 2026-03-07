@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	const MODE_STORAGE_KEY = 'advisor_mode_v1';
 	const SESSIONS_STORAGE_KEY = 'advisor_sessions_v1';
+	const SHARED_THREAD_STORAGE_KEY = 'advisor_shared_thread_v1';
 	const MAX_SESSIONS = 25;
 	const MAX_SESSION_MESSAGES = 40;
 
@@ -88,6 +89,57 @@ document.addEventListener('DOMContentLoaded', () => {
 		return arr.slice(-MAX_SESSION_MESSAGES);
 	};
 
+	const clampSharedMessages = (messages) => {
+		const arr = Array.isArray(messages) ? messages : [];
+		return arr
+			.map((m) => ({
+				role: String(m?.role || ''),
+				content: String(m?.content || ''),
+				render_html: m?.render_html ? String(m.render_html) : ''
+			}))
+			.filter((m) => m.role === 'user' || m.role === 'assistant')
+			.slice(-MAX_SESSION_MESSAGES);
+	};
+
+	const saveSharedThread = ({ mode, messages, results } = {}) => {
+		try {
+			const payload = {
+				v: 1,
+				updatedAt: nowTs(),
+				mode: normalizeMode(mode || 'auto'),
+				messages: clampSharedMessages(messages),
+				results: results && typeof results === 'object' ? results : null
+			};
+			localStorage.setItem(SHARED_THREAD_STORAGE_KEY, JSON.stringify(payload));
+		} catch {
+			// ignore
+		}
+	};
+
+	const saveSharedThreadFromEmbedded = () => {
+		if (!isEmbedded) return;
+		const s = getActiveSession();
+		if (!s) return;
+		saveSharedThread({ mode: s.mode, messages: s.messages || [], results: s.results || null });
+	};
+
+	const loadSharedThreadIntoFloatingState = () => {
+		if (isEmbedded) return false;
+		try {
+			const raw = localStorage.getItem(SHARED_THREAD_STORAGE_KEY);
+			if (!raw) return false;
+			const parsed = JSON.parse(raw);
+			const msgs = Array.isArray(parsed?.messages) ? parsed.messages : [];
+			if (!msgs.length) return false;
+			state.mode = normalizeMode(parsed?.mode || 'auto');
+			state.messages = clampSharedMessages(msgs);
+			state.lastSearch = parsed?.results && typeof parsed.results === 'object' ? parsed.results.search || null : null;
+			return true;
+		} catch {
+			return false;
+		}
+	};
+
 	const saveSessions = () => {
 		if (!isEmbedded) return;
 		try {
@@ -99,6 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		} catch {
 			// ignore storage errors
 		}
+		saveSharedThreadFromEmbedded();
 	};
 
 	const loadSessions = () => {
@@ -376,12 +429,14 @@ document.addEventListener('DOMContentLoaded', () => {
 			state.lastSearch = null;
 			if (chatMessages) chatMessages.innerHTML = '';
 			addMessageToChat(welcomeMessageForMode(state.mode), 'bot');
+			saveSharedThread({ mode: state.mode, messages: [], results: null });
 			return;
 		}
 		// Embedded: start a NEW session (keep history).
 		const mode = getMode();
 		createSession(mode);
 		setActiveSession(state.activeSessionId);
+		saveSharedThreadFromEmbedded();
 	};
 
 	const escapeHtml = (s) =>
@@ -400,6 +455,18 @@ document.addEventListener('DOMContentLoaded', () => {
 		messageElement.innerHTML = html ? String(text || '') : escapeHtmlWithBreaks(text);
 		chatMessages.appendChild(messageElement);
 		chatMessages.scrollTop = chatMessages.scrollHeight;
+	};
+
+	const renderFloatingFromState = () => {
+		if (isEmbedded) return;
+		if (!chatMessages) return;
+		chatMessages.innerHTML = '';
+		for (const m of Array.isArray(state.messages) ? state.messages : []) {
+			if (!m) continue;
+			const sender = m.role === 'user' ? 'user' : 'bot';
+			const html = sender === 'bot' && m.render_html ? m.render_html : '';
+			addMessageToChat(html || m.content, sender, { html: !!html });
+		}
 	};
 
 	const setBusy = (isBusy) => {
@@ -460,6 +527,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		if (place) params.set('place', place);
 		if (minMzda) params.set('min', String(Math.round(minMzda)));
 		if (dojezdKm) params.set('km', String(Math.round(dojezdKm)));
+		params.set('advisor', '1');
 
 		const qs = params.toString();
 		return `/prace.html${qs ? `?${qs}` : ''}#hledani`;
@@ -536,7 +604,8 @@ document.addEventListener('DOMContentLoaded', () => {
 				renderHistory();
 			}
 		} else {
-			state.messages.push({ role: 'user', content: messageText });
+			state.messages.push({ role: 'user', content: messageText, render_html: '' });
+			saveSharedThread({ mode: state.mode, messages: state.messages, results: null });
 		}
 
 		setBusy(true);
@@ -592,7 +661,8 @@ document.addEventListener('DOMContentLoaded', () => {
 					renderHistory();
 				}
 			} else {
-				state.messages.push({ role: 'assistant', content: reply || '' });
+				state.messages.push({ role: 'assistant', content: reply || '', render_html: html });
+				saveSharedThread({ mode: state.mode, messages: state.messages, results: data && typeof data === 'object' ? packResults(data) : null });
 			}
 		} catch (e) {
 			addMessageToChat(String(e?.message || 'Něco se nepovedlo.'), 'bot');
@@ -603,14 +673,20 @@ document.addEventListener('DOMContentLoaded', () => {
 	};
 
 	if (!isEmbedded) {
+		// Preload shared thread so it can be shown when the chat is opened.
+		loadSharedThreadIntoFloatingState();
 		chatTrigger.addEventListener('click', () => {
 			const open = chatWindow.style.display === 'flex';
 			chatWindow.style.display = open ? 'none' : 'flex';
 			if (!open && chatMessages.children.length === 0) {
-				addMessageToChat(
-					'Jsem kariérový poradce. Napiš mi jakou práci (nebo obor) hledáš + kde (město/kraj, případně dojezd) a případně minimální mzdu. Podle toho vyfiltruju nabídky a k tomu poradím další kroky.',
-					'bot'
-				);
+				if (state.messages && state.messages.length) {
+					renderFloatingFromState();
+				} else {
+					addMessageToChat(
+						'Jsem kariérový poradce. Napiš mi jakou práci (nebo obor) hledáš + kde (město/kraj, případně dojezd) a případně minimální mzdu. Podle toho vyfiltruju nabídky a k tomu poradím další kroky.',
+						'bot'
+					);
+				}
 			}
 		});
 	} else {
@@ -639,10 +715,14 @@ document.addEventListener('DOMContentLoaded', () => {
 		if (!isEmbedded) {
 			chatWindow.style.display = 'flex';
 			if (chatMessages.children.length === 0) {
-				addMessageToChat(
-					'Jsem kariérový poradce. Napiš mi jakou práci (nebo obor) hledáš + kde (město/kraj, případně dojezd) a případně minimální mzdu. Podle toho vyfiltruju nabídky a k tomu poradím další kroky.',
-					'bot'
-				);
+				if (state.messages && state.messages.length) {
+					renderFloatingFromState();
+				} else {
+					addMessageToChat(
+						'Jsem kariérový poradce. Napiš mi jakou práci (nebo obor) hledáš + kde (město/kraj, případně dojezd) a případně minimální mzdu. Podle toho vyfiltruju nabídky a k tomu poradím další kroky.',
+						'bot'
+					);
+				}
 			}
 		}
 	};
@@ -665,6 +745,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		renderActiveChat();
 		renderResults();
 		setSidebarTab(state.sidebarTab);
+		saveSharedThreadFromEmbedded();
 
 		if (embeddedResetBtn) {
 			embeddedResetBtn.addEventListener('click', (e) => {
@@ -731,5 +812,18 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (nextBtn) nextBtn.click();
 			if (nextBtn) nextBtn.focus();
 		});
+	}
+
+	// Auto-open floating chat when navigating from advisor links.
+	if (!isEmbedded) {
+		try {
+			const p = new URLSearchParams(location.search);
+			if (p.get('advisor') === '1') {
+				loadSharedThreadIntoFloatingState();
+				openChat();
+			}
+		} catch {
+			// ignore
+		}
 	}
 });
