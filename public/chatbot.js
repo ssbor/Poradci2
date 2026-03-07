@@ -462,7 +462,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		if (dojezdKm) params.set('km', String(Math.round(dojezdKm)));
 
 		const qs = params.toString();
-		return `prace.html${qs ? `?${qs}` : ''}#hledani`;
+		return `/prace.html${qs ? `?${qs}` : ''}#hledani`;
 	};
 
 	const offerDetailUrl = (offer) => {

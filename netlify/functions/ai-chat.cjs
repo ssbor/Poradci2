@@ -958,7 +958,7 @@ function buildJobsUrl(search) {
   if (Number.isFinite(dojezdKm) && dojezdKm > 0) params.set('km', String(Math.round(dojezdKm)));
 
   const qs = params.toString();
-  return `prace.html${qs ? `?${qs}` : ''}#hledani`;
+  return `/prace.html${qs ? `?${qs}` : ''}#hledani`;
 }
 
 function buildEduUrl(search) {
@@ -980,7 +980,7 @@ function buildEduUrl(search) {
   if (forma) params.set('forma', forma);
 
   const qs = params.toString();
-  return `vzdelani.html${qs ? `?${qs}` : ''}#hledani`;
+  return `/vzdelani.html${qs ? `?${qs}` : ''}#hledani`;
 }
 
 function buildCoursesUrl(search) {
@@ -988,7 +988,7 @@ function buildCoursesUrl(search) {
   const params = new URLSearchParams();
   if (q) params.set('q', q);
   const qs = params.toString();
-  return `kurzy.html${qs ? `?${qs}` : ''}`;
+  return `/kurzy.html${qs ? `?${qs}` : ''}`;
 }
 
 function json(statusCode, body, extraHeaders = {}) {
@@ -1416,7 +1416,7 @@ exports.handler = async function handler(event) {
           actions = [
             {
               label: n && n > 0 ? `Zobrazit nabídky (${n})` : 'Zobrazit nabídky',
-              url: jobs_url || 'prace.html#hledani'
+              url: jobs_url || '/prace.html#hledani'
             }
           ];
         } else if (intent === 'edu') {
@@ -1424,7 +1424,7 @@ exports.handler = async function handler(event) {
           actions = [
             {
               label: n && n > 0 ? `Zobrazit školy (${n})` : 'Otevřít vzdělání',
-              url: edu_url || 'vzdelani.html#hledani'
+              url: edu_url || '/vzdelani.html#hledani'
             }
           ];
         } else if (intent === 'courses') {
@@ -1434,7 +1434,7 @@ exports.handler = async function handler(event) {
         }
       } else if (mode === 'edu') {
         const n = edu_match_count != null && Number.isFinite(Number(edu_match_count)) ? Number(edu_match_count) : null;
-        actions = [{ label: n && n > 0 ? `Zobrazit školy (${n})` : 'Otevřít vzdělání', url: edu_url || 'vzdelani.html#hledani' }];
+        actions = [{ label: n && n > 0 ? `Zobrazit školy (${n})` : 'Otevřít vzdělání', url: edu_url || '/vzdelani.html#hledani' }];
       } else if (mode === 'courses') {
         actions = [{ label: 'Otevřít kurzy', url: buildCoursesUrl(out?.search || {}) }];
       } else if (mode === 'jobs') {
@@ -1442,14 +1442,14 @@ exports.handler = async function handler(event) {
         actions = [
           {
             label: n && n > 0 ? `Zobrazit nabídky (${n})` : 'Zobrazit nabídky',
-            url: jobs_url || 'prace.html#hledani'
+            url: jobs_url || '/prace.html#hledani'
           }
         ];
       } else {
         // all
         actions = [
-          { label: 'Pracovní nabídky', url: jobs_url || 'prace.html#hledani' },
-          { label: 'Vzdělání', url: edu_url || 'vzdelani.html#hledani' },
+          { label: 'Pracovní nabídky', url: jobs_url || '/prace.html#hledani' },
+          { label: 'Vzdělání', url: edu_url || '/vzdelani.html#hledani' },
           { label: 'Kurzy', url: buildCoursesUrl(out?.search || {}) }
         ];
       }

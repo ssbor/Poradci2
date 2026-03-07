@@ -94,6 +94,21 @@ a:hover{ text-decoration: underline; }
 }
 .nav a:hover{ background: rgba(19,102,214,.08); text-decoration: none; }
 
+@media (max-width: 720px){
+  .header-inner{ gap: .75rem; }
+  .brand{ min-width: 0; }
+  .brand-sub{ display:none; }
+
+  .nav{
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    justify-content: flex-end;
+  }
+  .nav a{ flex: 0 0 auto; }
+}
+
 /* Buttons */
 .btn{
   display:inline-flex;
@@ -163,8 +178,6 @@ a:hover{ text-decoration: underline; }
   padding: 1rem;
   box-shadow: var(--shadow-soft);
 }
-
-/* Card helpers (used on Kurzy page) */
 .card--stripe{ position: relative; overflow:hidden; }
 .card--stripe::before{
   content:"";
