@@ -1045,9 +1045,6 @@ function buildJobsUrl(search) {
   if (Number.isFinite(minMzda) && minMzda > 0) params.set('min', String(Math.round(minMzda)));
   if (Number.isFinite(dojezdKm) && dojezdKm > 0) params.set('km', String(Math.round(dojezdKm)));
 
-	// If user navigates via advisor, auto-open floating chat on the target page.
-	params.set('advisor', '1');
-
   const qs = params.toString();
   return `/prace.html${qs ? `?${qs}` : ''}#hledani`;
 }
@@ -1070,9 +1067,6 @@ function buildEduUrl(search) {
   if (stupen) params.set('stupen', stupen);
   if (forma) params.set('forma', forma);
 
-	// If user navigates via advisor, auto-open floating chat on the target page.
-	params.set('advisor', '1');
-
   const qs = params.toString();
   return `/vzdelani.html${qs ? `?${qs}` : ''}#hledani`;
 }
@@ -1081,7 +1075,6 @@ function buildCoursesUrl(search) {
   const q = String(search?.q || '').trim();
   const params = new URLSearchParams();
   if (q) params.set('q', q);
-	params.set('advisor', '1');
   const qs = params.toString();
   return `/kurzy.html${qs ? `?${qs}` : ''}`;
 }

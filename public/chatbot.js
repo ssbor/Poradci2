@@ -527,7 +527,6 @@ document.addEventListener('DOMContentLoaded', () => {
 		if (place) params.set('place', place);
 		if (minMzda) params.set('min', String(Math.round(minMzda)));
 		if (dojezdKm) params.set('km', String(Math.round(dojezdKm)));
-		params.set('advisor', '1');
 
 		const qs = params.toString();
 		return `/prace.html${qs ? `?${qs}` : ''}#hledani`;
@@ -814,16 +813,5 @@ document.addEventListener('DOMContentLoaded', () => {
 		});
 	}
 
-	// Auto-open floating chat when navigating from advisor links.
-	if (!isEmbedded) {
-		try {
-			const p = new URLSearchParams(location.search);
-			if (p.get('advisor') === '1') {
-				loadSharedThreadIntoFloatingState();
-				openChat();
-			}
-		} catch {
-			// ignore
-		}
-	}
+	// Note: we intentionally do NOT auto-open the floating chat on navigation.
 });
