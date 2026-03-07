@@ -76,8 +76,30 @@ a:hover{ text-decoration: underline; }
   font-weight: 900;
   box-shadow: var(--shadow-soft);
 }
+.brand-mark .brand-logo{
+  width: 26px;
+  height: 26px;
+  display:block;
+}
+.brand-mark .brand-logo path{
+  stroke: #fff;
+  stroke-width: 2.6;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: .95;
+}
 .brand-title{ margin: 0; font-size: 1rem; line-height: 1.1; }
 .brand-sub{ margin: 0; font-size: .85rem; color: var(--muted); }
+
+.footer-watermark{
+  justify-self: end;
+  align-self: end;
+  text-align: right;
+  font-size: .75rem;
+  letter-spacing: .25px;
+  opacity: .22;
+}
 
 .nav{
   display:flex;

@@ -11,9 +11,9 @@
 <header class="site-header">
   <div class="container header-inner">
     <a class="brand" href="index.html" aria-label="Domů">
-      <div class="brand-mark">SŠ</div>
+      <div class="brand-mark"><svg class="brand-logo" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l5 5-5 5"/><path d="M12 7l5 5-5 5"/></svg></div>
       <div>
-        <p class="brand-title">Střední škola Bor</p>
+        <p class="brand-title">What's next</p>
         <p class="brand-sub">Kariérové poradenství</p>
       </div>
     </a>
@@ -23,7 +23,6 @@
       <a href="vzdelani.html">Vzdělání</a>
       <a href="kurzy.html">Kurzy</a>
       <a href="poradce/index.html">Chytrý poradce</a>
-      <a href="statistiky/index.html">Statistiky</a>
       <a href="#faq">FAQ</a>
       <a href="#kontakt">Kontakt</a>
     </nav>
@@ -42,11 +41,6 @@
             <li>Vzdělání: nástavby, zkrácené studium, VOŠ/VŠ</li>
             <li>Kurzy: workshopy, rekvalifikace, materiály</li>
           </ul>
-          <div class="hero-actions">
-            <a class="btn btn--primary-dark" href="prace.html">Pracovní nabídky</a>
-            <a class="btn btn--primary-dark" href="vzdelani.html">Vzdělání po škole</a>
-            <a class="btn btn--primary-dark" href="kurzy.html">Kurzy</a>
-          </div>
         </div>
         <div class="card" style="border-color: rgba(255,255,255,.25); background: rgba(255,255,255,.14); color: #fff;">
           <h3 style="margin-top:0; color:#fff;">Tip</h3>
@@ -112,7 +106,7 @@
     </div>
 
     <div class="grid" style="margin-top: 1rem">
-      <div class="card card--feature card--advisor col-6">
+      <div class="card card--feature card--advisor col-12" style="max-width: 760px; justify-self: center;">
         <div class="card-title-row">
           <h3>Chytrý poradce</h3>
         </div>
@@ -126,21 +120,6 @@
           <a class="btn btn--advisor" href="poradce/index.html">Otevřít chytrého poradce</a>
         </div>
       </div>
-
-      <div class="card card--feature card--stats col-6">
-        <div class="card-title-row">
-          <h3>Statistiky</h3>
-        </div>
-        <p class="muted">Přehledy a čísla (např. nabídky podle krajů, top obory, trendy). Zatím je to připravené jako prázdný základ.</p>
-        <ul class="meta-list">
-          <li>Jedno místo pro přehledy</li>
-          <li>Prokliky do práce a vzdělání</li>
-          <li>Prostor pro grafy a KPI</li>
-        </ul>
-        <div style="margin-top: .9rem">
-          <a class="btn btn--primary-dark" href="statistiky/index.html">Otevřít statistiky</a>
-        </div>
-      </div>
     </div>
   </section>
 
@@ -149,11 +128,11 @@
     <div class="grid" style="margin-top: 1rem">
       <div class="card col-6">
         <h3>Co jsou ta data?</h3>
-        <p class="muted">Je to statická ukázka bez serveru (prototyp). Do budoucna se dá napojit reálný zdroj nebo vlastní databáze.</p>
+        <p class="muted">Práce i školy bereme z otevřených dat MPSV (ÚP ČR). Na pozadí se data pravidelně stáhnou a uloží do <b>/public/data</b> jako JSON, aby se web načítal rychle. Na stránkách pak probíhá vyhledávání a filtrování přímo v prohlížeči.</p>
         <ul class="meta-list">
-          <li>Možnost přidat více krajů</li>
-          <li>Možnost přidat detail nabídky</li>
-          <li>Možnost přidat export (CSV/PDF)</li>
+          <li>Práce: otevřená data „Volná místa“ (MPSV/ÚP)</li>
+          <li>Vzdělání: databáze škol a oborů (MPSV)</li>
+          <li>Kurzy: momentálně nejsou data ke kurzům poskytována</li>
         </ul>
       </div>
       <div class="card col-6">
@@ -183,10 +162,10 @@
   <footer class="site-footer">
     <div class="footer-grid">
       <div>
-        <strong>SŠ Bor – poradci</strong>
+        <strong>What's next</strong>
         <div class="muted">Rychlý rozcestník: práce, vzdělání a kurzy.</div>
       </div>
-      <div class="muted">Tip: když mi pošlete texty pro „Kurzy“ a „Poradci“, doplním je do layoutu.</div>
+      <div class="footer-watermark">vývojář: Jakub Bezpalec</div>
     </div>
   </footer>
 </main>
