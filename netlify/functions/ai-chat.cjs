@@ -1197,6 +1197,61 @@ function clampMessages(raw) {
   return out;
 }
 
+function isUpstreamUsageExceeded({ status, text } = {}) {
+  const s = Number(status || 0) || 0;
+  const t = String(text || '').toLowerCase();
+  if (s === 429) return true;
+  // Common provider strings.
+  if (t.includes('usage_exceeded')) return true;
+  if (t.includes('resource_exhausted')) return true;
+  if (t.includes('quota')) return true;
+  if (t.includes('rate limit') || t.includes('ratelimit')) return true;
+  return false;
+}
+
+function makeUsageExceededFallback({ mode, lastUserMsg }) {
+  const q = clampString(String(lastUserMsg || '').trim(), 180);
+  const inferred = inferIntentFromText(lastUserMsg) || 'general';
+  const intentFromMode = mode === 'jobs' ? 'jobs' : mode === 'edu' ? 'edu' : mode === 'courses' ? 'courses' : '';
+  const intent = mode === 'auto' ? inferred : intentFromMode || inferred;
+
+  const search = intent === 'general' ? null : { q };
+  const jobs_url = intent === 'jobs' && search ? buildJobsUrl(search) : null;
+  const edu_url = intent === 'edu' && search ? buildEduUrl(search) : null;
+
+  let actions = [];
+  if (mode === 'all') {
+    actions = [
+      { label: 'Pracovní nabídky', url: buildJobsUrl({ q }) },
+      { label: 'Vzdělání', url: buildEduUrl({ q }) },
+      { label: 'Kurzy', url: buildCoursesUrl({ q }) }
+    ];
+  } else if (intent === 'jobs') {
+    actions = [{ label: 'Otevřít práci', url: jobs_url || '/prace.html#hledani' }];
+  } else if (intent === 'edu') {
+    actions = [{ label: 'Otevřít vzdělání', url: edu_url || '/vzdelani.html#hledani' }];
+  } else if (intent === 'courses') {
+    actions = [{ label: 'Otevřít kurzy', url: buildCoursesUrl({ q }) }];
+  }
+
+  return {
+    reply:
+      'Teď mám dočasně vyčerpaný limit pro AI odpovědi. Zkus to prosím za chvíli znovu. Mezitím můžeš použít vyhledávání přes stránku s nabídkami (odkazy níže).',
+    intent,
+    profile: {},
+    search,
+    follow_up: null,
+    mode,
+    actions,
+    recommendations: [],
+    edu_recommendations: [],
+    jobs_match_count: null,
+    jobs_url,
+    edu_match_count: null,
+    edu_url
+  };
+}
+
 exports.handler = async function handler(event) {
   // CORS / preflight
   if (event.httpMethod === 'OPTIONS') {
@@ -1300,6 +1355,9 @@ exports.handler = async function handler(event) {
   try {
     let content = '';
 
+	const lastUserMsg =
+		[...messages].reverse().find((m) => m && m.role === 'user' && String(m.content || '').trim())?.content || '';
+
     if (provider === 'openai') {
       const resp = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -1318,6 +1376,9 @@ exports.handler = async function handler(event) {
 
       if (!resp.ok) {
         const text = await resp.text().catch(() => '');
+		if (isUpstreamUsageExceeded({ status: resp.status, text })) {
+			return json(200, makeUsageExceededFallback({ mode, lastUserMsg }), { 'access-control-allow-origin': '*' });
+		}
         return json(
           502,
           {
@@ -1365,6 +1426,9 @@ exports.handler = async function handler(event) {
 
       if (!resp.ok) {
         const text = await resp.text().catch(() => '');
+		if (isUpstreamUsageExceeded({ status: resp.status, text })) {
+			return json(200, makeUsageExceededFallback({ mode, lastUserMsg }), { 'access-control-allow-origin': '*' });
+		}
         let available_models = null;
         let available_models_text = '';
         try {
@@ -1404,8 +1468,6 @@ exports.handler = async function handler(event) {
       const parts = data?.candidates?.[0]?.content?.parts;
       content = Array.isArray(parts) ? parts.map((p) => p?.text || '').join('') : '';
     }
-
-    const lastUserMsg = [...messages].reverse().find((m) => m && m.role === 'user' && String(m.content || '').trim())?.content || '';
 
     const jsonText = stripJsonFromText(content);
     const outParsed = safeParseJson(jsonText);
