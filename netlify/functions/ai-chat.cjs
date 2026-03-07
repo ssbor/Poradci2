@@ -135,6 +135,67 @@ function inferIntentFromText(raw) {
   return '';
 }
 
+function inferIntentFromSearch(search) {
+  if (!search || typeof search !== 'object') return '';
+  const kraj = String(search.kraj || '').trim();
+  const place = String(search.place || '').trim();
+  const minMzda = search.minMzda != null ? Number(search.minMzda) : 0;
+  const dojezdKm = search.dojezdKm != null ? Number(search.dojezdKm) : 0;
+  const code = String(search.code || '').trim();
+  const krajId = String(search.krajId || '').trim();
+  const typSkoly = String(search.typSkoly || '').trim();
+  const druhSkoly = String(search.druhSkoly || '').trim();
+  const stupen = String(search.stupen || '').trim();
+  const forma = String(search.forma || '').trim();
+
+  const looksJobs = !!kraj || !!place || (Number.isFinite(minMzda) && minMzda > 0) || (Number.isFinite(dojezdKm) && dojezdKm > 0);
+  const looksEdu = !!code || !!krajId || !!typSkoly || !!druhSkoly || !!stupen || !!forma;
+  if (looksJobs && !looksEdu) return 'jobs';
+  if (looksEdu && !looksJobs) return 'edu';
+  return '';
+}
+
+function scoreIntentFromText(raw) {
+  const t = normalizeText(raw);
+  const score = { jobs: 0, edu: 0, courses: 0 };
+  if (!t) return score;
+
+  // Courses
+  if (/(\bkurz\b|rekvalifik|certifik|osvedcen|skolen)/i.test(t)) score.courses += 4;
+
+  // Education
+  if (/(\bskol\b|\bstud\w*\b|prihlask|maturit|ucen|vyuc|\bstredn\w*\b|\bvos\b|\bvs\b|vysok|univerzit|fakult)/i.test(t)) score.edu += 4;
+  if (/(\bobor\b|\bprogram\b|\bkod\b|k(o|ó)d\s*oboru)/i.test(t)) score.edu += 2;
+
+  // Jobs
+  if (/(\bmzda\b|\bplat\b|od\s*kolika|minimaln\w*\s*(mzda|plat)|dojezd|\bkm\b)/i.test(t)) score.jobs += 4;
+  if (/(\bprace\b|zamestnan|brigad|uvazek|\bpozic\w*\b|volna\s*mista|nabidk\w*(\s*(prace|mista))?)/i.test(t)) score.jobs += 2;
+
+  return score;
+}
+
+function resolveAutoIntent({ outIntent, inferredIntent, search, lastUserMsg }) {
+  const oi = normalizeIntent(outIntent) || '';
+  const ii = normalizeIntent(inferredIntent) || String(inferredIntent || '').trim().toLowerCase() || '';
+
+  const si = inferIntentFromSearch(search);
+  if (si) return si;
+
+  if (!oi) return ii || 'general';
+  if (!ii) return oi || 'general';
+  if (oi === ii) return oi;
+  if (oi === 'general') return ii;
+  if (ii === 'general') return oi;
+
+  if ((oi === 'edu' && ii === 'jobs') || (oi === 'jobs' && ii === 'edu')) {
+    const s = scoreIntentFromText(lastUserMsg);
+    if (s.jobs > s.edu) return 'jobs';
+    if (s.edu > s.jobs) return 'edu';
+  }
+
+  return oi;
+}
+
 function extractProgramCodeFromText(raw) {
   const s = String(raw || '');
   const m = s.match(/\b\d{2}\s*[-–]\s*\d{2}\s*[-–]\s*[A-Za-z]\s*\/\s*\d{2}\b/);
@@ -301,6 +362,33 @@ function maybeAddActionableTip(reply, { intent, search } = {}) {
 
   if (!tip) return base;
   const combined = `${base} ${tip}`.trim();
+  return clampString(combined, 650);
+}
+
+function maybeAddNoResultsNotice(reply, { intent, search, jobs_match_count, edu_match_count } = {}) {
+  const base = String(reply || '').trim();
+  const it = normalizeIntent(intent) || 'general';
+  if (!base) return base;
+  if (it !== 'jobs' && it !== 'edu') return base;
+
+  const s = search && typeof search === 'object' ? search : {};
+  const q = String(s.q || '').trim();
+  if (!q) return base;
+  const qShort = q.length > 80 ? q.slice(0, 77) + '…' : q;
+
+  const jobsN = jobs_match_count != null ? Number(jobs_match_count) : null;
+  const eduN = edu_match_count != null ? Number(edu_match_count) : null;
+
+  let msg = '';
+  if (it === 'jobs' && jobsN === 0) {
+    msg = `V aktuálním seznamu volných míst teď pro „${qShort}“ nic nenacházím.`;
+  } else if (it === 'edu' && eduN === 0) {
+    msg = `V našem seznamu škol/oborů teď pro „${qShort}“ nic nenacházím.`;
+  }
+
+  if (!msg) return base;
+  if (/nenach[aá]z[ií]m|nena[sš]el/i.test(base)) return base;
+  const combined = `${base} ${msg} Zkus podobný název nebo obecnější klíčové slovo.`.replace(/\s+/g, ' ').trim();
   return clampString(combined, 650);
 }
 
@@ -1334,7 +1422,10 @@ exports.handler = async function handler(event) {
     const outIntent = normalizeIntent(out?.intent);
     const inferredIntent = inferIntentFromText(lastUserMsg);
     const intentFromMode = mode === 'jobs' ? 'jobs' : mode === 'edu' ? 'edu' : mode === 'courses' ? 'courses' : '';
-    const intent = mode === 'auto' ? (outIntent || inferredIntent || 'general') : outIntent || intentFromMode || '';
+    const intent =
+      mode === 'auto'
+        ? resolveAutoIntent({ outIntent, inferredIntent, search: out?.search, lastUserMsg })
+        : outIntent || intentFromMode || '';
 
     // Ensure follow-up questions stay within filterable topics.
     out.follow_up = sanitizeFollowUp(out?.follow_up, { intent });
@@ -1405,6 +1496,14 @@ exports.handler = async function handler(event) {
     } catch {
       // ignore edu recommendations errors
     }
+
+    // If the chosen intent produced 0 matches, say it explicitly (instead of implicitly switching intent/buttons).
+    out.reply = maybeAddNoResultsNotice(out.reply, {
+      intent,
+      search: normalizedSearch || out?.search || null,
+      jobs_match_count,
+      edu_match_count
+    });
 
     // UX: actions/results should be available even if a follow-up question is asked.
     const okToShowActions = mode !== 'jobs' || anySearch;
