@@ -679,6 +679,8 @@ select.select[data-role="jobs-page-size"]{
 .jobs-offer__company{ color: var(--muted); margin-top: .12rem; font-size: .86rem; }
 
 .jobs-offer__actions{ margin-top: .45rem; display:flex; gap:.5rem; flex-wrap: wrap; }
+.jobs-wage__actions--mobile{ display:none; }
+.jobs-wage__text{ font: inherit; }
 .btn.jobs-more{
   padding: 6px 10px;
   border-radius: 10px;
@@ -876,6 +878,8 @@ select.select[data-role="jobs-page-size"]{
   .program-row{ grid-template-columns: 1fr; gap: .2rem; border-top: none; }
   .program-row + .program-row{ border-top: 1px dashed rgba(231,238,248,.95); }
 
+  .school-actions{ justify-content: flex-end; }
+
   /* Práce: make rows more compact on mobile (card-like layout) */
   .program-row.jobs-program-row{
     grid-template-columns: minmax(0, 1fr) auto;
@@ -892,6 +896,25 @@ select.select[data-role="jobs-page-size"]{
     font-weight: 900;
     font-variant-numeric: tabular-nums;
   }
+
+  /* On mobile, move the 'Více informací' button next to wage (right side) */
+  .jobs-offer__actions--desktop{ display:none; }
+  .jobs-wage{
+    display:flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: .35rem;
+    white-space: normal;
+  }
+  .jobs-wage__text{ white-space: nowrap; }
+  .jobs-wage__actions--mobile{ display:block; }
+  .jobs-wage__actions--mobile .btn.jobs-more{
+    background: rgba(19,102,214,.95);
+    border-color: rgba(15,79,166,.95);
+    color: #fff;
+    box-shadow: 0 10px 18px rgba(6, 30, 77, .16);
+  }
+  .jobs-wage__actions--mobile .btn.jobs-more:hover{ background: rgba(15,79,166,.98); border-color: rgba(15,79,166,.98); }
   .program-row.jobs-program-row > :nth-child(4){
     grid-column: 2 / 3;
     justify-self: end;

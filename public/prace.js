@@ -912,22 +912,27 @@
         const dt = formatOfferDate(offerPostingDateRaw(j));
         const canDetail = !!offerDetailUrl(j);
 
+        const detailActionHtml = canDetail
+          ? `<button class="btn btn--ghost jobs-more" type="button" data-action="offer-detail" data-idx="${idx}">Více informací</button>`
+          : `<span class="muted" style="font-size:.78rem">Detail není k dispozici</span>`;
+
         return `
         <div class="program-row jobs-program-row">
           <div class="jobs-offer">
             <div class="jobs-offer__title"><b>${escapeHtml(title)}</b></div>
             ${company ? `<div class="jobs-offer__company">${escapeHtml(company)}</div>` : ''}
-            <div class="jobs-offer__actions">
-              ${canDetail
-                ? `<button class="btn btn--ghost jobs-more" type="button" data-action="offer-detail" data-idx="${idx}">Více informací</button>`
-                : `<span class="muted" style="font-size:.78rem">Detail není k dispozici</span>`}
+            <div class="jobs-offer__actions jobs-offer__actions--desktop">
+              ${detailActionHtml}
             </div>
           </div>
           <div class="jobs-place">
             <span class="jobs-place__city">${escapeHtml(city)}</span>
             ${krajShort ? `<span class="jobs-place__kraj">${escapeHtml(krajShort)}</span>` : ''}
           </div>
-          <div class="jobs-wage">${escapeHtml(mz)}</div>
+          <div class="jobs-wage">
+            <div class="jobs-wage__text">${escapeHtml(mz)}</div>
+            <div class="jobs-wage__actions jobs-wage__actions--mobile">${detailActionHtml}</div>
+          </div>
           <div style="text-align:right">${escapeHtml(dt)}</div>
         </div>
       `;

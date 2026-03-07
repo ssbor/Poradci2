@@ -410,7 +410,7 @@
             ${progHtml || `<div class="muted" style="margin-top:.4rem">Nenalezeny žádné obory.</div>`}
           </div>
         </div>
-        <div style="margin-top:.9rem; display:flex; gap:.6rem; flex-wrap:wrap">
+        <div class="school-actions" style="margin-top:.9rem; display:flex; gap:.6rem; flex-wrap:wrap">
           ${urlHtml}
         </div>
       </div>
